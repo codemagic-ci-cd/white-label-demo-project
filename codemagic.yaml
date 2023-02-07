@@ -1,0 +1,323 @@
+definitions:
+  env_versions: &env_versions
+    flutter: 3.0.5
+    xcode: 14.1
+    cocoapods: default
+  env_vars: &env_vars
+    XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+    XCODE_SCHEME: "Runner"
+  env_groups: &env_groups
+    groups:
+      - ios_credentials
+      - aws_credentials
+      - cm_credentials
+  trigger_feature_pr: &trigger_feature_pr
+    events:
+      - pull_request
+    branch_patterns:
+      - pattern: develop
+        include: true
+        source: false
+  trigger_dev: &trigger_dev
+    events:
+      - push
+    branch_patterns:
+      - pattern: develop
+  trigger_qa: &trigger_qa
+    events:
+      - pull_request
+    branch_patterns:
+      - pattern: qa
+        include: true
+        source: true
+  trigger_trigger: &trigger_trigger
+    events:
+      - pull_request
+    branch_patterns:
+      - pattern: trigger
+        include: true
+        source: true        
+  scripts:
+    - &install_dependencies
+      name: Install dependencies
+      script: |
+        flutter packages pub get
+        find . -name "Podfile" -execdir pod install \;
+    - &ios_code_signing
+      name: iOS code signing
+      script: |
+        keychain initialize
+        app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+        keychain add-certificates
+        xcode-project use-profiles
+    - &unit_tests
+      name: Unit tests
+      script: |
+        mkdir -p test-results
+        flutter test --machine > test-results/flutter.json
+    - &build_ipa
+      name: Flutter build ipa and automatic versioning
+      script: |
+        flutter build ipa --release \
+        --build-name=1.0.0 \
+        --build-number=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1)) \
+        --export-options-plist=/Users/builder/export_options.plist
+    - &set_bundle_id
+      name: Set bundle id
+      script: |
+        PBXPROJ=$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj
+        sed -i.bak "s/\io.codemagic.whitelabel.dev/$BUNDLE_ID/g" $PBXPROJ
+    - &get_assets
+      name: Get assets from AWS S3 bucket
+      script: |
+        echo "Client ID: ${CLIENT_ID}"
+        aws s3 cp s3://cmwhitelabel/assets_${CLIENT_ID}.zip $CM_BUILD_DIR/assets.zip
+        unzip assets.zip -d client_assets
+    - &change_icons
+      name: Change app icons
+      script: |
+        rm -rf ios/Runner/Assets.xcassets/AppIcon.appiconset
+        cp -r ./client_assets/AppIcon.appiconset ios/Runner/Assets.xcassets/
+    - &set_image
+      name: Set main image
+      script: |
+        rm -rf assets/hero.png
+        cp -r ./client_assets/hero.png assets/hero.png
+    - &set_client_id
+      name: Set client id
+      script: |
+        cp -r ./client_assets/client.env assets/client.env
+    - &set_variables
+      name: Set environment variables from settings.env
+      script: |
+
+        source ./client_assets/settings.env
+
+        echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APP_STORE_CONNECT_KEY_IDENTIFIER" >> $CM_ENV
+        echo "APP_STORE_CONNECT_ISSUER_ID=$APP_STORE_CONNECT_ISSUER_ID" >> $CM_ENV
+
+        echo "BUNDLE_ID=$BUNDLE_ID" >> $CM_ENV
+        echo "APP_STORE_ID=$APP_STORE_ID" >> $CM_ENV
+
+        echo "APP_STORE_CONNECT_PRIVATE_KEY<<DELIMITER" >> $CM_ENV
+        echo "$APP_STORE_CONNECT_PRIVATE_KEY" >> $CM_ENV
+        echo "DELIMITER" >> $CM_ENV
+
+        echo "CERTIFICATE_PRIVATE_KEY<<DELIMITER" >> $CM_ENV
+        echo "$CERTIFICATE_PRIVATE_KEY" >> $CM_ENV
+        echo "DELIMITER" >> $CM_ENV
+
+  ios_app_store_publish: &ios_app_store_publish
+    app_store_connect:
+      api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+      key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+      issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+  email_publish: &email_publish
+    email: 
+      recipients:
+        - kevin@nevercode.io
+      notify:
+        success: true
+        failure: true
+  artifacts: 
+    - &ipa build/ios/ipa/*.ipa
+    - &xcodelog /tmp/xcodebuild_logs/*.log
+    - &flutterdrive flutter_drive.log
+    - &testresults test-results/flutter.json
+    - &dsym $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+workflows:
+  ios-dev-feature:
+    name: iOS dev feature
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      << : *env_groups
+      vars:
+        << : *env_vars
+        BUNDLE_ID: "io.codemagic.whitelabel.dev"
+        APP_STORE_ID: 1638741667
+        CLIENT_ID: "dev"
+      << : *env_versions
+    triggering:
+      << : *trigger_feature_pr
+    scripts:
+      - *install_dependencies
+      - *ios_code_signing
+      - *unit_tests
+      - *build_ipa   
+    artifacts: 
+      - *ipa
+      - *xcodelog
+      - *testresults
+    publishing:
+      <<: *email_publish
+      <<: *ios_app_store_publish
+
+  ios-dev-release:
+      name: iOS dev release
+      instance_type: mac_mini_m1
+      max_build_duration: 120
+      environment:
+        << : *env_groups
+        vars:
+          << : *env_vars
+          BUNDLE_ID: "io.codemagic.whitelabel.dev"
+          APP_STORE_ID: 1638741667
+          CLIENT_ID: "dev"
+        << : *env_versions
+      triggering:
+        << : *trigger_dev
+      scripts:
+        - *install_dependencies
+        - *ios_code_signing
+        - *unit_tests
+        - *build_ipa   
+      artifacts: 
+        - *ipa
+        - *xcodelog
+        - *testresults
+      publishing:
+        <<: *email_publish
+        <<: *ios_app_store_publish
+
+  ios-qa-release:
+    name: iOS QA release
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      << : *env_groups
+      vars:
+        << : *env_vars
+        BUNDLE_ID: "io.codemagic.whitelabel.qa"
+        APP_STORE_ID: 1638868703
+        CLIENT_ID: "qa"
+      << : *env_versions
+    triggering:
+      << : *trigger_qa
+    scripts:
+      - *install_dependencies
+      - *set_bundle_id
+      - *get_assets
+      - *change_icons
+      - *ios_code_signing
+      - *unit_tests
+      - *build_ipa   
+    artifacts: 
+      - *ipa
+      - *xcodelog
+      - *testresults
+    publishing:
+      <<: *email_publish
+      <<: *ios_app_store_publish
+
+
+  trigger:
+    name: Trigger
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      << : *env_groups
+      << : *env_versions        
+    scripts:
+      - name: Trigger Builds
+        script: |
+          CLIENTS=("001" "002" "003")
+          for CLIENT in ${CLIENTS[@]}; do
+            echo "CLIENT: $CLIENT"  
+            curl -H "Content-Type: application/json" -H "x-auth-token: ${CM_API_KEY}" \
+              --data '{
+                "appId": "62f12bd754bf379f7b80f532", 
+                "workflowId": "ios-qa-client-release",
+                "branch": "main",
+                "environment": { 
+                  "variables": { 
+                    "CLIENT_ID": "'${CLIENT}'"
+                   }
+                }
+              }' \
+            https://api.codemagic.io/builds
+          done
+
+  # Builds will be triggered via REST API
+  ios-client-release:
+    name: iOS client release
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      vars:
+        << : *env_vars
+        APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
+        APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
+        CERTIFICATE_PRIVATE_KEY: $CERTIFICATE_PRIVATE_KEY
+        BUNDLE_ID: $BUNDLE_ID
+        APP_STORE_ID: $APP_STORE_ID
+      groups:
+        - aws_credentials
+        - slack_credentials
+        - labels
+      << : *env_versions
+    scripts:
+      - *get_assets
+      - *set_variables
+      - *install_dependencies
+      - *set_bundle_id
+      - *set_client_id
+      - *change_icons
+      - *set_image
+      - *ios_code_signing
+      # - *unit_tests
+      - *build_ipa
+    artifacts: 
+      - *ipa
+      - *xcodelog
+      - *testresults
+    publishing:
+      scripts:
+        - name: Publish to Slack
+          script: |
+            # This is an alternative to using Codemagic's out of the box Slack notifications.
+
+            ARTIFACT_URL=$(echo $CM_ARTIFACT_LINKS | jq -r '.[] | select(.name | endswith("'".ipa"'")) | .url')
+
+            curl -0 -v -X POST $SLACK_WEBHOOK_URL \
+            -H 'Content-type: application/json' \
+            --data-raw '
+            {
+                "attachments": [
+                  {
+                    "blocks": [
+                      {
+                        "type": "section",
+                        "text": {
+                          "type": "mrkdwn",
+                          "text": "Build with build id: <https://codemagic.io/app/'"$CM_PROJECT_ID"'/build/'"$CM_BUILD_ID"'>"
+                        }
+                      },
+                      {
+                        "type": "divider"
+                      },
+                      {
+                        "type": "section",
+                        "text": {
+                          "type": "mrkdwn",
+                          "text": "Client ID: '"$CLIENT_ID"'"
+                        }
+                      },
+                      {
+                        "type": "divider"
+                      },
+                      {
+                        "type": "section",
+                        "text": {
+                        "type": "mrkdwn",
+                        "text": "*iOS ipa* <'"$ARTIFACT_URL"'|Download>"
+                        }
+                      },
+                    ]
+                  }
+                ]
+              }'        
+      <<: *email_publish
+      <<: *ios_app_store_publish
