@@ -66,7 +66,8 @@ definitions:
         echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
         echo "DELIMITER" >> $CM_ENV
 
-        echo "Your new CM_ENV is. \n ${CM_ENV}"
+        echo "Your new CM_ENV is:"
+        cat ${CM_ENV}
 
 
     # ----- Android scripts only -----
