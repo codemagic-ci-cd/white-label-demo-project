@@ -205,6 +205,7 @@ workflows:
     name: Android client release
     instance_type: mac_mini_m1
     max_build_duration: 120
+    <<: *labels
     environment:
       <<: *flutter_version
       <<: *env_groups
