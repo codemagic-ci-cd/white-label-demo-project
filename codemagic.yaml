@@ -206,7 +206,7 @@ workflows:
       <<: *flutter_version
       <<: *env_groups
       vars:
-        CLIENT_ID: 004
+        CLIENT_ID: "004"
         GOOGLE_PLAY_TRACK: internal
         PACKAGE_NAME: $PACKAGE_NAME
         CM_KEYSTORE_PASSWORD: $CM_KEYSTORE_PASSWORD
