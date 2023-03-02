@@ -1,6 +1,6 @@
 definitions:
   flutter_version: &flutter_version
-    flutter: 3.7.1
+    flutter: stable
   env_groups: &env_groups
     groups:
       - aws_credentials    
@@ -78,7 +78,7 @@ definitions:
     - &change_android_icons
       name: Change Android icons
       script: |
-        cp -r ./android_assets/* ./android/app/src/main/res
+        cp -r ./client_assets/android_assets/* ./android/app/src/main/res
     - &android_code_signing
       name: Set up key.properties
       script: | 
