@@ -39,6 +39,18 @@ definitions:
 
         source ./client_assets/settings.env
 
+        # Android stuff
+        echo "PACKAGE_NAME=$PACKAGE_NAME" >> $CM_ENV
+
+        echo "CM_KEYSTORE_PASSWORD=$CM_KEYSTORE_PASSWORD" >> $CM_ENV
+        echo "CM_KEY_PASSWORD=$CM_KEY_PASSWORD" >> $CM_ENV
+        echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
+        echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
+
+        echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS=<<DELIMITER" >> $CM_ENV
+        echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
+        echo "DELIMITER" >> $CM_ENV
+
         # iOS stuff
         echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APP_STORE_CONNECT_KEY_IDENTIFIER" >> $CM_ENV
         echo "APP_STORE_CONNECT_ISSUER_ID=$APP_STORE_CONNECT_ISSUER_ID" >> $CM_ENV
@@ -54,17 +66,6 @@ definitions:
         echo "$CERTIFICATE_PRIVATE_KEY" >> $CM_ENV
         echo "DELIMITER" >> $CM_ENV
 
-        # Android stuff
-        echo "PACKAGE_NAME=$PACKAGE_NAME" >> $CM_ENV
-
-        echo "CM_KEYSTORE_PASSWORD=$CM_KEYSTORE_PASSWORD" >> $CM_ENV
-        echo "CM_KEY_PASSWORD=$CM_KEY_PASSWORD" >> $CM_ENV
-        echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
-        echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
-
-        echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER" >> $CM_ENV
-        echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
-        echo "DELIMITER" >> $CM_ENV
 
         echo "Your new CM_ENV is:"
         cat ${CM_ENV}
