@@ -144,6 +144,7 @@ definitions:
     google_play:
       credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
       track: $GOOGLE_PLAY_TRACK 
+      submit_as_draft: true
   email_publish: &email_publish
     email: 
       recipients:
@@ -233,6 +234,4 @@ workflows:
       - *apk
       - *aab
     publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: $GOOGLE_PLAY_TRACK 
+      <<: *play_store_publish
