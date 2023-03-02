@@ -1,4 +1,4 @@
-package io.code.QA.whitelabel
+package io.codemagic.whitelabel001
 
 import io.flutter.embedding.android.FlutterActivity
 

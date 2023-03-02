@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.whitelabel">
+    package="io.codemagic.whitelabel001">
    <application
         android:label="whitelabel"
         android:name="${applicationName}"

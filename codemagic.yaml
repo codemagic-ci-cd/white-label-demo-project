@@ -1,83 +1,29 @@
 definitions:
-  env_versions: &env_versions
-    flutter: 3.0.5
-    xcode: 14.1
-    cocoapods: default
-  env_vars: &env_vars
-    XCODE_WORKSPACE: "ios/Runner.xcworkspace"
-    XCODE_SCHEME: "Runner"
+  flutter_version: &flutter_version
+    flutter: 3.7.1
   env_groups: &env_groups
     groups:
-      - ios_credentials
-      - aws_credentials
-      - cm_credentials
-  trigger_feature_pr: &trigger_feature_pr
-    events:
-      - pull_request
-    branch_patterns:
-      - pattern: develop
-        include: true
-        source: false
-  trigger_dev: &trigger_dev
-    events:
-      - push
-    branch_patterns:
-      - pattern: develop
-  trigger_qa: &trigger_qa
-    events:
-      - pull_request
-    branch_patterns:
-      - pattern: qa
-        include: true
-        source: true
-  trigger_trigger: &trigger_trigger
-    events:
-      - pull_request
-    branch_patterns:
-      - pattern: trigger
-        include: true
-        source: true        
+      - aws_credentials    
+  labels: &labels
+    labels:
+      - RELEASE
+      - ${CLIENT_ID}        
   scripts:
+    # Android & iOS scripts
     - &install_dependencies
       name: Install dependencies
-      script: |
-        flutter packages pub get
-        find . -name "Podfile" -execdir pod install \;
-    - &ios_code_signing
-      name: iOS code signing
-      script: |
-        keychain initialize
-        app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-        keychain add-certificates
-        xcode-project use-profiles
+      script: flutter packages pub get
     - &unit_tests
       name: Unit tests
       script: |
         mkdir -p test-results
         flutter test --machine > test-results/flutter.json
-    - &build_ipa
-      name: Flutter build ipa and automatic versioning
-      script: |
-        flutter build ipa --release \
-        --build-name=1.0.0 \
-        --build-number=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1)) \
-        --export-options-plist=/Users/builder/export_options.plist
-    - &set_bundle_id
-      name: Set bundle id
-      script: |
-        PBXPROJ=$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj
-        sed -i.bak "s/\io.codemagic.whitelabel.dev/$BUNDLE_ID/g" $PBXPROJ
     - &get_assets
       name: Get assets from AWS S3 bucket
       script: |
         echo "Client ID: ${CLIENT_ID}"
         aws s3 cp s3://cmwhitelabel/assets_${CLIENT_ID}.zip $CM_BUILD_DIR/assets.zip
         unzip assets.zip -d client_assets
-    - &change_icons
-      name: Change app icons
-      script: |
-        rm -rf ios/Runner/Assets.xcassets/AppIcon.appiconset
-        cp -r ./client_assets/AppIcon.appiconset ios/Runner/Assets.xcassets/
     - &set_image
       name: Set main image
       script: |
@@ -93,6 +39,7 @@ definitions:
 
         source ./client_assets/settings.env
 
+        # iOS stuff
         echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APP_STORE_CONNECT_KEY_IDENTIFIER" >> $CM_ENV
         echo "APP_STORE_CONNECT_ISSUER_ID=$APP_STORE_CONNECT_ISSUER_ID" >> $CM_ENV
 
@@ -107,11 +54,93 @@ definitions:
         echo "$CERTIFICATE_PRIVATE_KEY" >> $CM_ENV
         echo "DELIMITER" >> $CM_ENV
 
+        # Android stuff
+        echo "PACKAGE_NAME=$PACKAGE_NAME" >> $CM_ENV
+
+        echo "CM_KEYSTORE_PASSWORD=$CM_KEYSTORE_PASSWORD" >> $CM_ENV
+        echo "CM_KEY_PASSWORD=$CM_KEY_PASSWORD" >> $CM_ENV
+        echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
+        echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
+
+        echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER" >> $CM_ENV
+        echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
+        echo "DELIMITER" >> $CM_ENV
+
+        echo "Your new CM_ENV is. \n ${CM_ENV}"
+
+
+    # ----- Android scripts only -----
+    - &set_package_name
+      name: Set Package name
+      script: |
+        flutter pub add change_app_package_name
+        flutter pub run change_app_package_name:main $PACKAGE_NAME
+    - &change_android_icons
+      name: Change Android icons
+      script: |
+        cp -r ./android_assets/* ./android/app/src/main/res
+    - &android_code_signing
+      name: Set up key.properties
+      script: | 
+        cat >> "$CM_BUILD_DIR/android/key.properties" <<EOF
+        storePassword=$CM_KEYSTORE_PASSWORD
+        keyPassword=$CM_KEY_PASSWORD
+        keyAlias=$CM_KEY_ALIAS
+        storeFile=$CM_KEYSTORE_PATH
+        EOF         
+    - &build_apk
+      name: Flutter build apk
+      script: |
+        flutter build apk --release
+    - &build_aab
+      name: Flutter build aab and automatic versioning
+      script: |
+        # BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))
+        BUILD_NUMBER=2
+        flutter build appbundle --release \
+        --build-name=1.0.$BUILD_NUMBER \
+        --build-number=$BUILD_NUMBER
+
+
+    # ----- iOS scripts only -----
+    - &install_pods
+      name: Install pods
+      script: find . -name "Podfile" -execdir pod install \;
+    - &ios_code_signing
+      name: iOS code signing
+      script: |
+        keychain initialize
+        app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+        keychain add-certificates
+        xcode-project use-profiles
+    - &build_ipa
+      name: Flutter build ipa and automatic versioning
+      script: |
+        BUILD_NUMBER=$$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
+        flutter build ipa --release \
+        --build-name=1.0.$BUILD_NUMBER \
+        --build-number=$BUILD_NUMBER\
+        --export-options-plist=/Users/builder/export_options.plist
+    - &set_bundle_id
+      name: Set bundle id
+      script: |
+        PBXPROJ=$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj
+        sed -i.bak "s/\io.codemagic.whitelabel.dev/$BUNDLE_ID/g" $PBXPROJ
+    - &change_ios_icons
+      name: Change iOS icons
+      script: |
+        rm -rf ios/Runner/Assets.xcassets/AppIcon.appiconset
+        cp -r ./client_assets/ios_assets ios/Runner/Assets.xcassets/
+
   ios_app_store_publish: &ios_app_store_publish
     app_store_connect:
       api_key: $APP_STORE_CONNECT_PRIVATE_KEY
       key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
       issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+  play_store_publish: &play_store_publish
+    google_play:
+      credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      track: $GOOGLE_PLAY_TRACK 
   email_publish: &email_publish
     email: 
       recipients:
@@ -119,205 +148,85 @@ definitions:
       notify:
         success: true
         failure: true
-  artifacts: 
+  artifacts:  
     - &ipa build/ios/ipa/*.ipa
     - &xcodelog /tmp/xcodebuild_logs/*.log
     - &flutterdrive flutter_drive.log
     - &testresults test-results/flutter.json
     - &dsym $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    - &apk build/**/outputs/**/*.apk
+    - &aab build/**/outputs/**/*.aab
+
+
 
 workflows:
-  ios-dev-feature:
-    name: iOS dev feature
-    instance_type: mac_mini_m1
-    max_build_duration: 120
-    environment:
-      << : *env_groups
-      vars:
-        << : *env_vars
-        BUNDLE_ID: "io.codemagic.whitelabel.dev"
-        APP_STORE_ID: 1638741667
-        CLIENT_ID: "dev"
-      << : *env_versions
-    triggering:
-      << : *trigger_feature_pr
-    scripts:
-      - *install_dependencies
-      - *ios_code_signing
-      - *unit_tests
-      - *build_ipa   
-    artifacts: 
-      - *ipa
-      - *xcodelog
-      - *testresults
-    publishing:
-      <<: *email_publish
-      <<: *ios_app_store_publish
-
-  ios-dev-release:
-      name: iOS dev release
-      instance_type: mac_mini_m1
-      max_build_duration: 120
-      environment:
-        << : *env_groups
-        vars:
-          << : *env_vars
-          BUNDLE_ID: "io.codemagic.whitelabel.dev"
-          APP_STORE_ID: 1638741667
-          CLIENT_ID: "dev"
-        << : *env_versions
-      triggering:
-        << : *trigger_dev
-      scripts:
-        - *install_dependencies
-        - *ios_code_signing
-        - *unit_tests
-        - *build_ipa   
-      artifacts: 
-        - *ipa
-        - *xcodelog
-        - *testresults
-      publishing:
-        <<: *email_publish
-        <<: *ios_app_store_publish
-
-  ios-qa-release:
-    name: iOS QA release
-    instance_type: mac_mini_m1
-    max_build_duration: 120
-    environment:
-      << : *env_groups
-      vars:
-        << : *env_vars
-        BUNDLE_ID: "io.codemagic.whitelabel.qa"
-        APP_STORE_ID: 1638868703
-        CLIENT_ID: "qa"
-      << : *env_versions
-    triggering:
-      << : *trigger_qa
-    scripts:
-      - *install_dependencies
-      - *set_bundle_id
-      - *get_assets
-      - *change_icons
-      - *ios_code_signing
-      - *unit_tests
-      - *build_ipa   
-    artifacts: 
-      - *ipa
-      - *xcodelog
-      - *testresults
-    publishing:
-      <<: *email_publish
-      <<: *ios_app_store_publish
-
-
-  trigger:
-    name: Trigger
-    instance_type: mac_mini_m1
-    max_build_duration: 120
-    environment:
-      << : *env_groups
-      << : *env_versions        
-    scripts:
-      - name: Trigger Builds
-        script: |
-          CLIENTS=("001" "002" "003")
-          for CLIENT in ${CLIENTS[@]}; do
-            echo "CLIENT: $CLIENT"  
-            curl -H "Content-Type: application/json" -H "x-auth-token: ${CM_API_KEY}" \
-              --data '{
-                "appId": "62f12bd754bf379f7b80f532", 
-                "workflowId": "ios-qa-client-release",
-                "branch": "main",
-                "environment": { 
-                  "variables": { 
-                    "CLIENT_ID": "'${CLIENT}'"
-                   }
-                }
-              }' \
-            https://api.codemagic.io/builds
-          done
-
   # Builds will be triggered via REST API
   ios-client-release:
     name: iOS client release
     instance_type: mac_mini_m1
     max_build_duration: 120
+    <<: *labels  
     environment:
+      xcode: 14.1
+      cocoapods: default
+      <<: *flutter_version
+      <<: *env_groups
       vars:
-        << : *env_vars
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
         APP_STORE_CONNECT_PRIVATE_KEY: $APP_STORE_CONNECT_PRIVATE_KEY
         APP_STORE_CONNECT_KEY_IDENTIFIER: $APP_STORE_CONNECT_KEY_IDENTIFIER
         APP_STORE_CONNECT_ISSUER_ID: $APP_STORE_CONNECT_ISSUER_ID
         CERTIFICATE_PRIVATE_KEY: $CERTIFICATE_PRIVATE_KEY
         BUNDLE_ID: $BUNDLE_ID
         APP_STORE_ID: $APP_STORE_ID
-      groups:
-        - aws_credentials
-        - slack_credentials
-        - labels
-      << : *env_versions
     scripts:
       - *get_assets
       - *set_variables
       - *install_dependencies
+      - *install_pods
       - *set_bundle_id
       - *set_client_id
-      - *change_icons
+      - *change_ios_icons
       - *set_image
       - *ios_code_signing
-      # - *unit_tests
       - *build_ipa
     artifacts: 
       - *ipa
       - *xcodelog
       - *testresults
-    publishing:
-      scripts:
-        - name: Publish to Slack
-          script: |
-            # This is an alternative to using Codemagic's out of the box Slack notifications.
-
-            ARTIFACT_URL=$(echo $CM_ARTIFACT_LINKS | jq -r '.[] | select(.name | endswith("'".ipa"'")) | .url')
-
-            curl -0 -v -X POST $SLACK_WEBHOOK_URL \
-            -H 'Content-type: application/json' \
-            --data-raw '
-            {
-                "attachments": [
-                  {
-                    "blocks": [
-                      {
-                        "type": "section",
-                        "text": {
-                          "type": "mrkdwn",
-                          "text": "Build with build id: <https://codemagic.io/app/'"$CM_PROJECT_ID"'/build/'"$CM_BUILD_ID"'>"
-                        }
-                      },
-                      {
-                        "type": "divider"
-                      },
-                      {
-                        "type": "section",
-                        "text": {
-                          "type": "mrkdwn",
-                          "text": "Client ID: '"$CLIENT_ID"'"
-                        }
-                      },
-                      {
-                        "type": "divider"
-                      },
-                      {
-                        "type": "section",
-                        "text": {
-                        "type": "mrkdwn",
-                        "text": "*iOS ipa* <'"$ARTIFACT_URL"'|Download>"
-                        }
-                      },
-                    ]
-                  }
-                ]
-              }'        
-      <<: *email_publish
+    publishing:      
       <<: *ios_app_store_publish
+  
+  android-client-release:
+    name: Android client release
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      <<: *flutter_version
+      <<: *env_groups
+      vars:
+        CLIENT_ID: 004
+        GOOGLE_PLAY_TRACK: internal
+        PACKAGE_NAME: $PACKAGE_NAME
+        CM_KEYSTORE_PASSWORD: $CM_KEYSTORE_PASSWORD
+        CM_KEY_PASSWORD: $CM_KEY_PASSWORD
+        CM_KEY_ALIAS: $CM_KEY_ALIAS
+        CM_KEYSTORE_PATH: $CM_KEYSTORE_PATH
+        GCLOUD_SERVICE_ACCOUNT_CREDENTIALS: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    scripts:
+      - *get_assets
+      - *set_variables
+      - *install_dependencies
+      - *set_package_name
+      - *set_client_id
+      - *change_android_icons
+      - *set_image
+      # - *android_code_signing
+      - *build_apk
+      - *build_aab
+    artifacts: 
+      - *apk
+      - *aab
+    publishing:
+      <<: *play_store_publish
