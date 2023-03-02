@@ -4,6 +4,7 @@ definitions:
   env_groups: &env_groups
     groups:
       - aws_credentials    
+      - playstore_credentials    
   labels: &labels
     labels:
       - RELEASE
