@@ -233,4 +233,6 @@ workflows:
       - *apk
       - *aab
     publishing:
-      <<: *play_store_publish
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: $GOOGLE_PLAY_TRACK 
