@@ -228,5 +228,5 @@ workflows:
     artifacts: 
       - *apk
       - *aab
-    publishing:
-      <<: *play_store_publish
+    # publishing:
+    #   <<: *play_store_publish
