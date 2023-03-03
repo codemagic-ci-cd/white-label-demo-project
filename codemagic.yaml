@@ -51,7 +51,7 @@ definitions:
         echo "PLAYSTORE_CREDENTIALS<<DELIMITER" >> $CM_ENV
         echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
         echo "DELIMITER" >> $CM_ENV
-        # export GCLOUD_SERVICE_ACCOUNT_CREDENTIALS="$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS"
+        export PLAYSTORE_CREDENTIALS="$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS"
 
         # iOS stuff
         echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APP_STORE_CONNECT_KEY_IDENTIFIER" >> $CM_ENV
@@ -146,7 +146,7 @@ definitions:
   email_publish: &email_publish
     email: 
       recipients:
-        - kevin@nevercode.io
+        - mohammed@nevercode.io
       notify:
         success: true
         failure: true
@@ -228,3 +228,4 @@ workflows:
       - *aab
     publishing:
       <<: *play_store_publish
+      <<: *email_publish
