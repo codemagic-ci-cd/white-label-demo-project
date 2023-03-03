@@ -221,7 +221,7 @@ workflows:
       - *change_android_icons
       - *set_image
       # - *android_code_signing
-      - *build_apk
+      # - *build_apk
       - *build_aab
     artifacts: 
       - *apk
