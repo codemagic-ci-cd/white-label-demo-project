@@ -68,10 +68,6 @@ definitions:
         echo "DELIMITER" >> $CM_ENV
 
 
-        echo "Your new CM_ENV is:"
-        cat ${CM_ENV}
-
-
     # ----- Android scripts only -----
     - &set_package_name
       name: Set Package name
@@ -91,7 +87,6 @@ definitions:
         keyAlias=$CM_KEY_ALIAS
         storeFile=$CM_KEYSTORE_PATH
         EOF         
-        cat $CM_BUILD_DIR/android/key.properties
     - &build_apk
       name: Flutter build apk
       script: |
@@ -223,7 +218,7 @@ workflows:
       - *set_client_id
       - *change_android_icons
       - *set_image
-      - *android_code_signing
+      # - *android_code_signing
       - *build_apk
       - *build_aab
     artifacts: 
