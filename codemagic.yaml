@@ -91,6 +91,7 @@ definitions:
         keyAlias=$CM_KEY_ALIAS
         storeFile=$CM_KEYSTORE_PATH
         EOF         
+        cat $CM_BUILD_DIR/android/key.properties
     - &build_apk
       name: Flutter build apk
       script: |
@@ -214,12 +215,6 @@ workflows:
       vars:
         CLIENT_ID: "004"
         GOOGLE_PLAY_TRACK: internal
-        # PACKAGE_NAME: $PACKAGE_NAME
-        # CM_KEYSTORE_PASSWORD: $CM_KEYSTORE_PASSWORD
-        # CM_KEY_PASSWORD: $CM_KEY_PASSWORD
-        # CM_KEY_ALIAS: $CM_KEY_ALIAS
-        # CM_KEYSTORE_PATH: $CM_KEYSTORE_PATH
-        # GCLOUD_SERVICE_ACCOUNT_CREDENTIALS: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
     scripts:
       - *get_assets
       - *set_variables
