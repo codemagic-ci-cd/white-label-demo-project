@@ -227,5 +227,5 @@ workflows:
       - *apk
       - *aab
     publishing:
-      <<: *play_store_publish
+      # <<: *play_store_publish
       <<: *email_publish
