@@ -48,10 +48,10 @@ definitions:
         echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
         echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
 
-        echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER" >> $CM_ENV
+        echo "PLAYSTORE_CREDENTIALS<<DELIMITER" >> $CM_ENV
         echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
         echo "DELIMITER" >> $CM_ENV
-        export GCLOUD_SERVICE_ACCOUNT_CREDENTIALS="$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS"
+        # export GCLOUD_SERVICE_ACCOUNT_CREDENTIALS="$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS"
 
         # iOS stuff
         echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APP_STORE_CONNECT_KEY_IDENTIFIER" >> $CM_ENV
@@ -139,7 +139,7 @@ definitions:
       issuer_id: $APP_STORE_CONNECT_ISSUER_ID
   play_store_publish: &play_store_publish
     google_play:
-      credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      credentials: $PLAYSTORE_CREDENTIALS
       track: $GOOGLE_PLAY_TRACK 
       submit_as_draft: true
       changes_not_sent_for_review: true
@@ -211,7 +211,7 @@ workflows:
       vars:
         CLIENT_ID: "004"
         GOOGLE_PLAY_TRACK: internal
-        GCLOUD_SERVICE_ACCOUNT_CREDENTIALS: $BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        PLAYSTORE_CREDENTIALS: $BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
     scripts:
       - *get_assets
       - *set_variables
