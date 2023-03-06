@@ -4,7 +4,7 @@ definitions:
   env_groups: &env_groups
     groups:
       - aws_credentials    
-      # - playstore_credentials    
+      - playstore_credentials    
   labels: &labels
     labels:
       - RELEASE
@@ -48,10 +48,11 @@ definitions:
         echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
         echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
 
-        echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER" >> $CM_ENV
-        echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
-        echo "DELIMITER" >> $CM_ENV
-        export GCLOUD_SERVICE_ACCOUNT_CREDENTIALS="$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS"
+        echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS='$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS'" >> $CM_ENV
+
+        # echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER" >> $CM_ENV
+        # echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
+        # echo "DELIMITER" >> $CM_ENV
         # echo "PLAYSTORE_CREDENTIALS<<DELIMITER" >> $CM_ENV
         # echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
         # echo "DELIMITER" >> $CM_ENV
