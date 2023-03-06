@@ -49,6 +49,7 @@ definitions:
         echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
 
         echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS='$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS'" >> $CM_ENV
+        export GCLOUD_SERVICE_ACCOUNT_CREDENTIALS="$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS"
 
         # echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER" >> $CM_ENV
         # echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
@@ -235,5 +236,8 @@ workflows:
       - *apk
       - *aab
     publishing:
+      scripts:
+        - echo $BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        - echo $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
       <<: *play_store_publish
       # <<: *email_publish
