@@ -37,8 +37,8 @@ definitions:
     - &set_gcloud-service-account
       name: Set GCloud service account
       script: |
-        echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS=\"`sed -e :a -e '$!N;s/ *\n */ /;ta' -e 'P;D' ./client_assets/gcloud-service-account.json`\"" >> $CM_ENV
-        export GCLOUD_SERVICE_ACCOUNT_CREDENTIALS="$(sed -e :a -e '$!N;s/ *\n */ /;ta' -e 'P;D' ./client_assets/gcloud-service-account.json)"
+        # echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS=\"`sed -e :a -e '$!N;s/ *\n */ /;ta' -e 'P;D' ./client_assets/gcloud-service-account.json`\"" >> $CM_ENV
+        echo "BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS=\"`sed -e :a -e '$!N;s/ *\n */ /;ta' -e 'P;D' ./client_assets/gcloud-service-account.json`\"" >> $CM_ENV
     - &set_variables
       name: Set environment variables from settings.env
       script: |
@@ -53,9 +53,10 @@ definitions:
         echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
         echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
 
-        echo 'BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER' >> $CM_ENV
-        echo "$BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
-        echo 'DELIMITER' >> $CM_ENV
+        # echo 'BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER' >> $CM_ENV
+        # echo "$BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
+        # echo 'DELIMITER' >> $CM_ENV
+
         # echo "PLAYSTORE_CREDENTIALS<<DELIMITER" >> $CM_ENV
         # echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
         # echo "DELIMITER" >> $CM_ENV
@@ -149,8 +150,8 @@ definitions:
       issuer_id: $APP_STORE_CONNECT_ISSUER_ID
   play_store_publish: &play_store_publish
     google_play:
-      credentials: $MOHAMMED_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-      # credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      # credentials: $MOHAMMED_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
       track: $GOOGLE_PLAY_TRACK 
       submit_as_draft: true
       changes_not_sent_for_review: true
@@ -226,7 +227,7 @@ workflows:
         # PLAYSTORE_CREDENTIALS: $BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
     scripts:
       - *get_assets
-      # - *set_gcloud-service-account
+      - *set_gcloud-service-account
       - *set_variables
       - *install_dependencies
       - *set_package_name
