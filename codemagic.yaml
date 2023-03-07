@@ -53,9 +53,9 @@ definitions:
         echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
         echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
 
-        # echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER" >> $CM_ENV
-        # echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
-        # echo "DELIMITER" >> $CM_ENV
+        echo "BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER" >> $CM_ENV
+        echo "$BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
+        echo "DELIMITER" >> $CM_ENV
         # echo "PLAYSTORE_CREDENTIALS<<DELIMITER" >> $CM_ENV
         # echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
         # echo "DELIMITER" >> $CM_ENV
@@ -225,7 +225,7 @@ workflows:
         # PLAYSTORE_CREDENTIALS: $BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
     scripts:
       - *get_assets
-      - *set_gcloud-service-account
+      # - *set_gcloud-service-account
       - *set_variables
       - *install_dependencies
       - *set_package_name
@@ -239,8 +239,8 @@ workflows:
       - *apk
       - *aab
     publishing:
-      scripts:
-        - echo $BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        - echo $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    #   scripts:
+    #     - echo $BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    #     - echo $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
       <<: *play_store_publish
       # <<: *email_publish
