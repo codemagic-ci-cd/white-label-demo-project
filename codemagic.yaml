@@ -34,6 +34,10 @@ definitions:
       name: Set client id
       script: |
         cp -r ./client_assets/client.env assets/client.env
+    - &set_gcloud-service-account
+      name: Set environment variables from settings.env
+      script: |
+        echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS=\"`sed -E 's/$/\\\n/g' ./client_assets/gcloud-service-account.json`\"" >> $CM_ENV
     - &set_variables
       name: Set environment variables from settings.env
       script: |
@@ -47,9 +51,6 @@ definitions:
         echo "CM_KEY_PASSWORD=$CM_KEY_PASSWORD" >> $CM_ENV
         echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
         echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
-
-        echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS='$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS'" >> $CM_ENV
-        export GCLOUD_SERVICE_ACCOUNT_CREDENTIALS="$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS"
 
         # echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER" >> $CM_ENV
         # echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
@@ -223,6 +224,7 @@ workflows:
         # PLAYSTORE_CREDENTIALS: $BASE_GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
     scripts:
       - *get_assets
+      - *set_gcloud-service-account
       - *set_variables
       - *install_dependencies
       - *set_package_name
