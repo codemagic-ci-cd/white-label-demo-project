@@ -38,6 +38,7 @@ definitions:
       name: Set GCloud service account
       script: |
         echo "GCLOUD_SERVICE_ACCOUNT_CREDENTIALS=\"`sed -e :a -e '$!N;s/ *\n */ /;ta' -e 'P;D' ./client_assets/gcloud-service-account.json`\"" >> $CM_ENV
+        export GCLOUD_SERVICE_ACCOUNT_CREDENTIALS="$(sed -e :a -e '$!N;s/ *\n */ /;ta' -e 'P;D' ./client_assets/gcloud-service-account.json)"
     - &set_variables
       name: Set environment variables from settings.env
       script: |
