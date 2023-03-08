@@ -80,7 +80,7 @@ definitions:
       name: Flutter build aab and automatic versioning
       script: |
         # BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))
-        BUILD_NUMBER=3
+        BUILD_NUMBER=4
         flutter build appbundle --release \
         --build-name=1.0.$BUILD_NUMBER \
         --build-number=$BUILD_NUMBER
@@ -204,6 +204,7 @@ workflows:
       <<: *flutter_version
       <<: *env_groups
       vars:
+        <<: *env_vars
         CLIENT_ID: "004"
         GOOGLE_PLAY_TRACK: internal
         GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
