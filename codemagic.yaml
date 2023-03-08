@@ -7,12 +7,12 @@ definitions:
     groups:
       - ios_credentials
       - aws_credentials
-      - cm_credentials    
+      - cm_credentials  # Includes (CM_API_KEY) for triggering Codemagic builds via API requests
   android_groups: &android_groups
     groups:
-      - playstore_credentials # Contains (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow
+      - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow
       - aws_credentials
-      - cm_credentials    
+      - cm_credentials  # Includes (CM_API_KEY) for triggering Codemagic builds via API requests
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel
     CLIENT_ASSETS_FOLDER: client_assets
