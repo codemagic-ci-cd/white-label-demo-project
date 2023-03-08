@@ -1,6 +1,10 @@
 definitions:
   flutter_version: &flutter_version
     flutter: stable
+  env_vars: &env_vars
+    S3_BUCKET_NAME: cmwhitelabel
+    S3_ASSETS_FILE: assets_${CLIENT_ID}.zip
+    ASSETS_FOLDER: /client_assets
   env_groups: &env_groups
     groups:
       - aws_credentials    
@@ -23,8 +27,8 @@ definitions:
       name: Get assets from AWS S3 bucket
       script: |
         echo "Client ID: ${CLIENT_ID}"
-        aws s3 cp s3://cmwhitelabel/assets_${CLIENT_ID}.zip $CM_BUILD_DIR/assets.zip
-        unzip assets.zip -d client_assets
+        aws s3 cp s3://$S3_BUCKET_NAME/$S3_ASSETS_FILE $CM_BUILD_DIR/assets.zip
+        unzip assets.zip -d $ASSETS_FOLDER
     - &set_image
       name: Set main image
       script: |
@@ -80,7 +84,6 @@ definitions:
         flutter build appbundle --release \
         --build-name=1.0.$BUILD_NUMBER \
         --build-number=$BUILD_NUMBER
-
   ios_scripts:
     - &set_ios_variables
       name: Set iOS environment variables from settings.env
