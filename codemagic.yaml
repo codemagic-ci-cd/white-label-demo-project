@@ -1,7 +1,6 @@
 definitions:
-  flutter_version: &flutter_version
+  env_versions: &env_versions
     flutter: stable
-  ios_env_versions: &ios_env_versions
     xcode: 14.1
     cocoapods: default    
   ios_groups: &ios_groups
@@ -251,14 +250,13 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 120
     environment:
+      << : *env_versions
       << : *ios_groups
       vars:
         << : *xcode_env_vars
         BUNDLE_ID: "io.codemagic.whitelabel.dev"
         APP_STORE_ID: 1638741667
         CLIENT_ID: "dev"
-      << : *ios_env_versions
-      << : *flutter_version
     triggering:
       << : *trigger_feature_pr
     scripts:
@@ -279,14 +277,13 @@ workflows:
       instance_type: mac_mini_m1
       max_build_duration: 120
       environment:
+        << : *env_versions
         << : *ios_groups
         vars:
           << : *xcode_env_vars
           BUNDLE_ID: "io.codemagic.whitelabel.dev"
           APP_STORE_ID: 1638741667
           CLIENT_ID: "dev"
-      << : *ios_env_versions
-      << : *flutter_version
       triggering:
         << : *trigger_dev
       scripts:
@@ -307,13 +304,13 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 120
     environment:
+      << : *env_versions
       << : *ios_groups
       vars:
         << : *xcode_env_vars
         BUNDLE_ID: "io.codemagic.whitelabel.qa"
         APP_STORE_ID: 1638868703
         CLIENT_ID: "qa"
-      << : *ios_env_versions
     triggering:
       << : *trigger_qa
     scripts:
@@ -338,8 +335,8 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 120
     environment:
+      << : *env_versions
       << : *ios_groups
-      << : *ios_env_versions        
       vars:
         APP_ID: 62f12bd754bf379f7b80f532
         WORKFLOW_ID: ios-qa-client-release
@@ -370,9 +367,7 @@ workflows:
     max_build_duration: 120
     <<: *labels  
     environment:
-      xcode: 14.1
-      cocoapods: default
-      <<: *flutter_version
+      <<: *env_versions
       <<: *ios_groups
       vars:
         <<: *xcode_env_vars
@@ -401,13 +396,13 @@ workflows:
     max_build_duration: 120
     <<: *labels
     environment:
-      <<: *flutter_version
+      <<: *env_versions
       <<: *android_groups
       vars:
+        <<: *env_vars
         CLIENT_ID: "004" # to be deleted
         GOOGLE_PLAY_TRACK: internal
         GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        <<: *env_vars
     scripts:
       - *get_assets
       - *set_android_variables
