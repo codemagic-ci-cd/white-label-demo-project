@@ -5,7 +5,7 @@ definitions:
     cocoapods: default    
   ios_groups: &ios_groups
     groups:
-      - ios_credentials
+      # - ios_credentials
       - aws_credentials
       - cm_credentials  # Includes (CM_API_KEY) for triggering Codemagic builds via API requests
   android_groups: &android_groups
