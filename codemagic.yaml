@@ -3,7 +3,7 @@ definitions:
     flutter: stable
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel
-    S3_ASSETS_FILE: assets_${CLIENT_ID}.zip
+    S3_ASSETS_FILE: "assets_${CLIENT_ID}.zip"
     ASSETS_FOLDER: /client_assets
   env_groups: &env_groups
     groups:
