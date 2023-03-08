@@ -370,6 +370,7 @@ workflows:
       <<: *env_versions
       <<: *ios_groups
       vars:
+        CLIENT_ID: "004" # to be deleted
         <<: *xcode_env_vars
         BASE_BUNDLE_ID: io.codemagic.whitelabel.dev
     scripts:
