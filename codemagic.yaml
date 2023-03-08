@@ -27,7 +27,9 @@ definitions:
       name: Get assets from AWS S3 bucket
       script: |
         echo "Client ID: ${CLIENT_ID}"
-        aws s3 cp s3://$S3_BUCKET_NAME/$S3_ASSETS_FILE $CM_BUILD_DIR/assets.zip
+        echo $S3_ASSETS_FILE
+        echo "$S3_ASSETS_FILE"
+        aws s3 cp s3://$S3_BUCKET_NAME/$S3_ASSETS_FILE assets.zip
         unzip assets.zip -d $ASSETS_FOLDER
     - &set_image
       name: Set main image
@@ -204,10 +206,10 @@ workflows:
       <<: *flutter_version
       <<: *env_groups
       vars:
-        <<: *env_vars
         CLIENT_ID: "004"
         GOOGLE_PLAY_TRACK: internal
         GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        <<: *env_vars
     scripts:
       - *get_assets
       - *set_android_variables
