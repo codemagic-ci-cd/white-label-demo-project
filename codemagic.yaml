@@ -3,11 +3,9 @@ definitions:
     flutter: stable
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel
-    ASSETS_FOLDER: client_assets
-  env_groups: &env_groups
-    groups:
-      - aws_credentials    
-      - playstore_credentials    
+    CLIENT_ASSETS_FOLDER: client_assets
+    ANDROID_ASSETS_FOLDER: android_assets
+    IOS_ASSETS_FOLDER: ios_assets  
   labels: &labels
     labels:
       - RELEASE
@@ -26,21 +24,21 @@ definitions:
       script: |
         echo "Client ID: ${CLIENT_ID}"
         aws s3 cp s3://$S3_BUCKET_NAME/assets_${CLIENT_ID}.zip assets.zip
-        unzip assets.zip -d $ASSETS_FOLDER
+        unzip assets.zip -d $CLIENT_ASSETS_FOLDER
     - &set_image
       name: Set main image
       script: |
         rm -rf assets/hero.png
-        cp -r ./client_assets/hero.png assets/hero.png
+        cp -r ./$CLIENT_ASSETS_FOLDER/hero.png assets/hero.png
     - &set_client_id
       name: Set client id
       script: |
-        cp -r ./client_assets/client.env assets/client.env
+        cp -r ./$CLIENT_ASSETS_FOLDER/client.env assets/client.env
   android_scripts:
     - &set_android_variables
       name: Set Android environment variables from settings.env
       script: |
-        source ./client_assets/settings.env
+        source ./$CLIENT_ASSETS_FOLDER/settings.env
 
         echo "PACKAGE_NAME=$PACKAGE_NAME" >> $CM_ENV
 
@@ -60,7 +58,7 @@ definitions:
     - &change_android_icons
       name: Change Android icons
       script: |
-        cp -r ./client_assets/android_assets/* ./android/app/src/main/res
+        cp -r ./$CLIENT_ASSETS_FOLDER/$ANDROID_ASSETS_FOLDER/* ./android/app/src/main/res
     - &android_code_signing
       name: Set up key.properties
       script: | 
@@ -78,7 +76,7 @@ definitions:
       name: Flutter build aab and automatic versioning
       script: |
         # BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))
-        BUILD_NUMBER=4
+        BUILD_NUMBER=4 # to be deleted
         flutter build appbundle --release \
         --build-name=1.0.$BUILD_NUMBER \
         --build-number=$BUILD_NUMBER
@@ -86,7 +84,7 @@ definitions:
     - &set_ios_variables
       name: Set iOS environment variables from settings.env
       script: |
-        source ./client_assets/settings.env
+        source ./$CLIENT_ASSETS_FOLDER/settings.env
 
         echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APP_STORE_CONNECT_KEY_IDENTIFIER" >> $CM_ENV
         echo "APP_STORE_CONNECT_ISSUER_ID=$APP_STORE_CONNECT_ISSUER_ID" >> $CM_ENV
@@ -124,12 +122,12 @@ definitions:
       name: Set bundle id
       script: |
         PBXPROJ=$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj
-        sed -i.bak "s/\io.codemagic.whitelabel.dev/$BUNDLE_ID/g" $PBXPROJ
+        sed -i.bak "s/\$BASE_BUNDLE_ID/$BUNDLE_ID/g" $PBXPROJ
     - &change_ios_icons
       name: Change iOS icons
       script: |
         rm -rf ios/Runner/Assets.xcassets/AppIcon.appiconset
-        cp -r ./client_assets/ios_assets ios/Runner/Assets.xcassets/
+        cp -r ./$CLIENT_ASSETS_FOLDER/$IOS_ASSETS_FOLDER ios/Runner/Assets.xcassets/
 
   ios_app_store_publish: &ios_app_store_publish
     app_store_connect:
@@ -141,7 +139,6 @@ definitions:
       credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER
       track: $GOOGLE_PLAY_TRACK 
       submit_as_draft: true
-      changes_not_sent_for_review: true
   email_publish: &email_publish
     email: 
       recipients:
@@ -171,10 +168,12 @@ workflows:
       xcode: 14.1
       cocoapods: default
       <<: *flutter_version
-      <<: *env_groups
+      groups:
+        - aws_credentials
       vars:
         XCODE_WORKSPACE: "ios/Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
+        BASE_BUNDLE_ID: io.codemagic.whitelabel.dev
     scripts:
       - *get_assets
       - *set_ios_variables
@@ -200,9 +199,11 @@ workflows:
     <<: *labels
     environment:
       <<: *flutter_version
-      <<: *env_groups
+      groups:
+        - aws_credentials
+        - playstore_credentials
       vars:
-        CLIENT_ID: "004"
+        CLIENT_ID: "004" # to be deleted
         GOOGLE_PLAY_TRACK: internal
         GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
         <<: *env_vars
@@ -222,4 +223,3 @@ workflows:
       - *aab
     publishing:
       <<: *play_store_publish
-      # <<: *email_publish
