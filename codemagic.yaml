@@ -3,7 +3,6 @@ definitions:
     flutter: stable
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel
-    S3_ASSETS_FILE: "assets_${CLIENT_ID}.zip"
     ASSETS_FOLDER: /client_assets
   env_groups: &env_groups
     groups:
@@ -27,9 +26,7 @@ definitions:
       name: Get assets from AWS S3 bucket
       script: |
         echo "Client ID: ${CLIENT_ID}"
-        echo $S3_ASSETS_FILE
-        echo "$S3_ASSETS_FILE"
-        aws s3 cp s3://$S3_BUCKET_NAME/$S3_ASSETS_FILE assets.zip
+        aws s3 cp s3://$S3_BUCKET_NAME/assets_${CLIENT_ID}.zip assets.zip
         unzip assets.zip -d $ASSETS_FOLDER
     - &set_image
       name: Set main image
