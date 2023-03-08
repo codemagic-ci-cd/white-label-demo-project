@@ -3,10 +3,6 @@ definitions:
     flutter: stable
     xcode: 14.1
     cocoapods: default    
-  ios_groups: &ios_groups
-    groups:
-      - ios_credentials
-      - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
   android_groups: &android_groups
     groups:
       - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow.
@@ -179,7 +175,8 @@ workflows:
     <<: *labels  
     environment:
       <<: *env_versions
-      <<: *ios_groups
+      groups:
+        - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
       vars:
         <<: *xcode_env_vars
         BASE_BUNDLE_ID: io.codemagic.whitelabel.dev # <-- Put the bundle ID that exists in the code, it will be replaced with the client's.
