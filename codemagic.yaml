@@ -3,7 +3,7 @@ definitions:
     flutter: stable
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel
-    ASSETS_FOLDER: /client_assets
+    ASSETS_FOLDER: client_assets
   env_groups: &env_groups
     groups:
       - aws_credentials    
@@ -13,7 +13,6 @@ definitions:
       - RELEASE
       - ${CLIENT_ID}        
   scripts:
-    # Android & iOS scripts
     - &install_dependencies
       name: Install dependencies
       script: flutter packages pub get
