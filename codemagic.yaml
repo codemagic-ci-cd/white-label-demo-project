@@ -1,15 +1,57 @@
 definitions:
   flutter_version: &flutter_version
     flutter: stable
+  ios_env_versions: &ios_env_versions
+    xcode: 14.1
+    cocoapods: default    
+  ios_groups: &ios_groups
+    groups:
+      - ios_credentials
+      - aws_credentials
+      - cm_credentials    
+  android_groups: &android_groups
+    groups:
+      - playstore_credentials # Contains (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow
+      - aws_credentials
+      - cm_credentials    
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel
     CLIENT_ASSETS_FOLDER: client_assets
     ANDROID_ASSETS_FOLDER: android_assets
     IOS_ASSETS_FOLDER: ios_assets  
+  xcode_env_vars: &xcode_env_vars
+    XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+    XCODE_SCHEME: "Runner"    
   labels: &labels
     labels:
       - RELEASE
-      - ${CLIENT_ID}        
+      - ${CLIENT_ID}      
+  trigger_feature_pr: &trigger_feature_pr
+    events:
+      - pull_request
+    branch_patterns:
+      - pattern: develop
+        include: true
+        source: false
+  trigger_dev: &trigger_dev
+    events:
+      - push
+    branch_patterns:
+      - pattern: develop
+  trigger_qa: &trigger_qa
+    events:
+      - pull_request
+    branch_patterns:
+      - pattern: qa
+        include: true
+        source: true
+  trigger_trigger: &trigger_trigger
+    events:
+      - pull_request
+    branch_patterns:
+      - pattern: trigger
+        include: true
+        source: true             
   scripts:
     - &install_dependencies
       name: Install dependencies
@@ -34,6 +76,52 @@ definitions:
       name: Set client id
       script: |
         cp -r ./$CLIENT_ASSETS_FOLDER/client.env assets/client.env
+    - &slack_publishing
+      name: Publish to Slack
+      script: |
+        # This is an alternative to using Codemagic's out of the box Slack notifications.
+
+        ARTIFACT_URL=$(echo $CM_ARTIFACT_LINKS | jq -r '.[] | select(.name | endswith("'".ipa"'")) | .url')
+
+        curl -0 -v -X POST $SLACK_WEBHOOK_URL \
+        -H 'Content-type: application/json' \
+        --data-raw '
+        {
+            "attachments": [
+              {
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "Build with build id: <https://codemagic.io/app/'"$CM_PROJECT_ID"'/build/'"$CM_BUILD_ID"'>"
+                    }
+                  },
+                  {
+                    "type": "divider"
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "Client ID: '"$CLIENT_ID"'"
+                    }
+                  },
+                  {
+                    "type": "divider"
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                    "type": "mrkdwn",
+                    "text": "*iOS ipa* <'"$ARTIFACT_URL"'|Download>"
+                    }
+                  },
+                ]
+              }
+            ]
+          }'      
+
   android_scripts:
     - &set_android_variables
       name: Set Android environment variables from settings.env
@@ -158,6 +246,123 @@ definitions:
 
 
 workflows:
+  ios-dev-feature:
+    name: iOS dev feature
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      << : *ios_groups
+      vars:
+        << : *xcode_env_vars
+        BUNDLE_ID: "io.codemagic.whitelabel.dev"
+        APP_STORE_ID: 1638741667
+        CLIENT_ID: "dev"
+      << : *ios_env_versions
+      << : *flutter_version
+    triggering:
+      << : *trigger_feature_pr
+    scripts:
+      - *install_dependencies
+      - *install_pods
+      - *ios_code_signing
+      - *unit_tests
+      - *build_ipa   
+    artifacts: 
+      - *ipa
+      - *xcodelog
+      - *testresults
+    publishing:
+      <<: *email_publish
+      <<: *ios_app_store_publish
+  ios-dev-release:
+      name: iOS dev release
+      instance_type: mac_mini_m1
+      max_build_duration: 120
+      environment:
+        << : *ios_groups
+        vars:
+          << : *xcode_env_vars
+          BUNDLE_ID: "io.codemagic.whitelabel.dev"
+          APP_STORE_ID: 1638741667
+          CLIENT_ID: "dev"
+      << : *ios_env_versions
+      << : *flutter_version
+      triggering:
+        << : *trigger_dev
+      scripts:
+        - *install_dependencies
+        - *install_pods
+        - *ios_code_signing
+        - *unit_tests
+        - *build_ipa   
+      artifacts: 
+        - *ipa
+        - *xcodelog
+        - *testresults
+      publishing:
+        <<: *email_publish
+        <<: *ios_app_store_publish
+  ios-qa-release:
+    name: iOS QA release
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      << : *ios_groups
+      vars:
+        << : *xcode_env_vars
+        BUNDLE_ID: "io.codemagic.whitelabel.qa"
+        APP_STORE_ID: 1638868703
+        CLIENT_ID: "qa"
+      << : *ios_env_versions
+    triggering:
+      << : *trigger_qa
+    scripts:
+      - *install_dependencies
+      - *install_pods
+      - *set_bundle_id
+      - *get_assets
+      - *change_ios_icons
+      - *ios_code_signing
+      - *unit_tests
+      - *build_ipa   
+    artifacts: 
+      - *ipa
+      - *xcodelog
+      - *testresults
+    publishing:
+      <<: *email_publish
+      <<: *ios_app_store_publish
+
+  trigger:
+    name: Trigger
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      << : *ios_groups
+      << : *ios_env_versions        
+      vars:
+        APP_ID: 62f12bd754bf379f7b80f532
+        WORKFLOW_ID: ios-qa-client-release
+    scripts:
+      - name: Trigger Builds
+        script: |
+          CLIENTS=("001" "002" "003")
+          for CLIENT in ${CLIENTS[@]}; do
+            echo "CLIENT: $CLIENT"  
+            curl -H "Content-Type: application/json" -H "x-auth-token: ${CM_API_KEY}" \
+              --data '{
+                "appId": "$APP_ID", 
+                "workflowId": "$WORKFLOW_ID",
+                "branch": "main",
+                "environment": { 
+                  "variables": { 
+                    "CLIENT_ID": "'${CLIENT}'"
+                   }
+                }
+              }' \
+            https://api.codemagic.io/builds
+          done
+
   # Builds will be triggered via REST API
   ios-client-release:
     name: iOS client release
@@ -168,11 +373,9 @@ workflows:
       xcode: 14.1
       cocoapods: default
       <<: *flutter_version
-      groups:
-        - aws_credentials
+      <<: *ios_groups
       vars:
-        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
-        XCODE_SCHEME: "Runner"
+        <<: *xcode_env_vars
         BASE_BUNDLE_ID: io.codemagic.whitelabel.dev
     scripts:
       - *get_assets
@@ -199,9 +402,7 @@ workflows:
     <<: *labels
     environment:
       <<: *flutter_version
-      groups:
-        - aws_credentials
-        - playstore_credentials
+      <<: *android_groups
       vars:
         CLIENT_ID: "004" # to be deleted
         GOOGLE_PLAY_TRACK: internal
