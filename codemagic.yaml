@@ -3,9 +3,8 @@ definitions:
     flutter: stable
     xcode: 14.1
     cocoapods: default    
-  android_groups: &android_groups
+  aws_group: &aws_group
     groups:
-      - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow.
       - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel # The name of your S3 bucket that have all of your clients assets.
@@ -17,7 +16,33 @@ definitions:
     XCODE_SCHEME: "Runner"
   labels: &labels
     labels:
-      - ${CLIENT_ID} # Helpful when you open your Codemagic's builds page     
+      - ${CLIENT_ID} # Helpful when you open your Codemagic's builds page   
+  trigger_feature_pr: &trigger_feature_pr
+    events:
+      - pull_request
+    branch_patterns:
+      - pattern: develop
+        include: true
+        source: false
+  trigger_dev: &trigger_dev
+    events:
+      - push
+    branch_patterns:
+      - pattern: develop
+  trigger_qa: &trigger_qa
+    events:
+      - pull_request
+    branch_patterns:
+      - pattern: qa
+        include: true
+        source: true
+  trigger_trigger: &trigger_trigger
+    events:
+      - pull_request
+    branch_patterns:
+      - pattern: trigger
+        include: true
+        source: true           
   scripts:
     - &install_dependencies
       name: Install dependencies
@@ -43,53 +68,6 @@ definitions:
       script: |
         cp -r ./$CLIENT_ASSETS_FOLDER/client.env assets/client.env
     
-
-  android_scripts:
-    - &set_android_variables
-      name: Set Android environment variables from settings.env
-      script: |
-        source ./$CLIENT_ASSETS_FOLDER/settings.env
-
-        echo "PACKAGE_NAME=$PACKAGE_NAME" >> $CM_ENV
-
-        echo "CM_KEYSTORE_PASSWORD=$CM_KEYSTORE_PASSWORD" >> $CM_ENV
-        echo "CM_KEY_PASSWORD=$CM_KEY_PASSWORD" >> $CM_ENV
-        echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
-        echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
-
-        echo 'GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER' >> $CM_ENV
-        echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
-        echo 'DELIMITER' >> $CM_ENV
-    - &set_package_name
-      name: Set Package name
-      script: |
-        flutter pub add change_app_package_name
-        flutter pub run change_app_package_name:main $PACKAGE_NAME
-    - &change_android_icons
-      name: Change Android icons
-      script: |
-        cp -r ./$CLIENT_ASSETS_FOLDER/$ANDROID_ASSETS_FOLDER/* ./android/app/src/main/res
-    - &android_code_signing
-      name: Set up key.properties
-      script: | 
-        cat >> "$CM_BUILD_DIR/android/key.properties" <<EOF
-        storePassword=$CM_KEYSTORE_PASSWORD
-        keyPassword=$CM_KEY_PASSWORD
-        keyAlias=$CM_KEY_ALIAS
-        storeFile=$CM_KEYSTORE_PATH
-        EOF         
-    - &build_apk
-      name: Flutter build apk
-      script: |
-        flutter build apk --release
-    - &build_aab
-      name: Flutter build aab and automatic versioning
-      script: |
-        BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))
-        flutter build appbundle --release \
-        --build-name=1.0.$BUILD_NUMBER \
-        --build-number=$BUILD_NUMBER
-  ios_scripts:
     - &set_ios_variables
       name: Set iOS environment variables from settings.env
       script: |
@@ -143,11 +121,6 @@ definitions:
       api_key: $APP_STORE_CONNECT_PRIVATE_KEY
       key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
       issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-  play_store_publish: &play_store_publish
-    google_play:
-      credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER
-      track: $GOOGLE_PLAY_TRACK 
-      submit_as_draft: true
   email_publish: &email_publish
     email: 
       recipients:
@@ -166,63 +139,118 @@ definitions:
 
 
 
-# Builds will be triggered via REST API with the $CLIENT_ID in the payload
 workflows:
-  ios-client-release:
-    name: iOS client release
+  ios-dev-feature:
+    name: iOS dev feature
     instance_type: mac_mini_m1
     max_build_duration: 120
-    <<: *labels  
     environment:
-      <<: *env_versions
-      groups:
-        - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
+      <<: *aws_group
       vars:
-        <<: *xcode_env_vars
-        BASE_BUNDLE_ID: io.codemagic.whitelabel.dev # <-- Put the bundle ID that exists in the code, it will be replaced with the client's.
+        << : *xcode_env_vars
+        BUNDLE_ID: "io.codemagic.whitelabel.dev"
+        APP_STORE_ID: xxxxxxxxxx
+        CLIENT_ID: "dev"
+    triggering:
+      << : *trigger_feature_pr
     scripts:
-      - *get_assets
-      - *set_ios_variables
       - *install_dependencies
       - *install_pods
-      - *set_bundle_id
-      - *set_client_id
-      - *change_ios_icons
-      - *set_image
       - *ios_code_signing
-      - *build_ipa
+      - *unit_tests
+      - *build_ipa   
     artifacts: 
       - *ipa
       - *xcodelog
       - *testresults
-    publishing:      
-      <<: *ios_app_store_publish
+    publishing:
       <<: *email_publish
-  
-  android-client-release:
-    name: Android client release
+      <<: *ios_app_store_publish
+
+  ios-dev-release:
+      name: iOS dev release
+      instance_type: mac_mini_m1
+      max_build_duration: 120
+      environment:
+        << : *env_versions
+        << : *aws_group
+        vars:
+          << : *xcode_env_vars
+          BUNDLE_ID: "io.codemagic.whitelabel.dev"
+          APP_STORE_ID: xxxxxxxxxx
+          CLIENT_ID: "dev"
+      triggering:
+        << : *trigger_dev
+      scripts:
+        - *install_dependencies
+        - *install_pods
+        - *ios_code_signing
+        - *unit_tests
+        - *build_ipa   
+      artifacts: 
+        - *ipa
+        - *xcodelog
+        - *testresults
+      publishing:
+        <<: *email_publish
+        <<: *ios_app_store_publish
+
+  ios-qa-release:
+    name: iOS QA release
     instance_type: mac_mini_m1
     max_build_duration: 120
-    <<: *labels
     environment:
-      <<: *env_versions
-      <<: *android_groups
+      <<: *aws_group
       vars:
-        <<: *env_vars
-        GOOGLE_PLAY_TRACK: internal # <-- The track you want to publish to in Google Play.
-        GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS # <-- This service account is only for validating the inital workflow, and will not be used to publish the app
+        << : *xcode_env_vars
+        BUNDLE_ID: "io.codemagic.whitelabel.qa"
+        APP_STORE_ID: xxxxxxxxxx
+        CLIENT_ID: "qa"
+    triggering:
+      << : *trigger_qa
     scripts:
-      - *get_assets
-      - *set_android_variables
       - *install_dependencies
-      - *set_package_name
-      - *set_client_id
-      - *change_android_icons
-      - *set_image
-      - *build_aab
+      - *install_pods
+      - *set_bundle_id
+      - *get_assets
+      - *change_ios_icons
+      - *ios_code_signing
+      - *unit_tests
+      - *build_ipa   
     artifacts: 
-      - *apk
-      - *aab
+      - *ipa
+      - *xcodelog
+      - *testresults
     publishing:
-      <<: *play_store_publish
       <<: *email_publish
+      <<: *ios_app_store_publish
+
+  trigger:
+    name: Trigger
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      << : *env_versions
+      << : *aws_group
+      vars:
+        APP_ID: xxxxxxxxxx
+        WORKFLOW_ID: ios-qa-client-release
+    scripts:
+      - name: Trigger Builds
+        script: |
+          CLIENTS=("001" "002" "003")
+          for CLIENT in ${CLIENTS[@]}; do
+            echo "CLIENT: $CLIENT"  
+            curl -H "Content-Type: application/json" -H "x-auth-token: ${CM_API_KEY}" \
+              --data '{
+                "appId": "$APP_ID", 
+                "workflowId": "$WORKFLOW_ID",
+                "branch": "main",
+                "environment": { 
+                  "variables": { 
+                    "CLIENT_ID": "'${CLIENT}'"
+                   }
+                }
+              }' \
+            https://api.codemagic.io/builds
+          done
