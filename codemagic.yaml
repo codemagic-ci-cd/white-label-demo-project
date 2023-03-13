@@ -12,7 +12,8 @@ definitions:
     groups:
       - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow
       - aws_credentials
-      - cm_credentials  # Includes (CM_API_KEY) for triggering Codemagic builds via API requests and (SLACK_WEBHOOK_URL)
+      - cm_credentials  # Includes (CM_API_KEY) for triggering Codemagic builds via API requests
+      - slack_credentials  # Includes (MOHAMMED_SLACK_WEBHOOK_URL) for custom Slack integrations
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel
     CLIENT_ASSETS_FOLDER: client_assets
@@ -427,7 +428,6 @@ workflows:
             # To use the script, you need to paste your API access token below. 
             # The access token is available in the Codemagic UI under 
             # Teams > Personal Account > Integrations > Codemagic API > Show
-            # API_TOKEN=
 
             # Enter your desired artifact retention in DAYS
             RETENTION=7
@@ -486,6 +486,6 @@ workflows:
             done
             REQ="$REQ $FOOT"
       
-            curl -0 -v -X POST $SLACK_WEBHOOK_URL \
+            curl -0 -v -X POST $MOHAMMED_SLACK_WEBHOOK_URL \
             -H 'Content-type: application/json' \
             --data-raw $REQ    
