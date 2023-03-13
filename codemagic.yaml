@@ -12,7 +12,7 @@ definitions:
     groups:
       - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow
       - aws_credentials
-      - cm_credentials  # Includes (CM_API_KEY) for triggering Codemagic builds via API requests
+      - cm_credentials  # Includes (CM_API_KEY) for triggering Codemagic builds via API requests and (SLACK_WEBHOOK_URL)
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel
     CLIENT_ASSETS_FOLDER: client_assets
@@ -418,5 +418,74 @@ workflows:
     artifacts: 
       - *apk
       - *aab
+    # publishing:
+    #   <<: *play_store_publish
     publishing:
-      <<: *play_store_publish
+      scripts: 
+        - name: Publish to Slack
+          script: | 
+            # To use the script, you need to paste your API access token below. 
+            # The access token is available in the Codemagic UI under 
+            # Teams > Personal Account > Integrations > Codemagic API > Show
+            # API_TOKEN=
+
+            # Enter your desired artifact retention in DAYS
+            RETENTION=7
+
+            DAY_SECONDS=86400
+            NOW=$(date +%s)
+            EXPIRATION=$(( $NOW + $RETENTION*$DAY_SECONDS ))
+            APP_LINK=$(echo $CM_ARTIFACT_LINKS | jq -r '.[].url')
+            ARTIFACTS+=( $APP_LINK )
+            for i in ${ARTIFACTS[@]}; do
+              RESPONSE+=$(curl -H "Content-Type: application/json" \
+                          -H "x-auth-token: $CM_API_KEY" \
+                          -d "{\"expiresAt\": $EXPIRATION}" \
+                          -X POST ${ARTIFACTS[$i]})
+              URLS+=$(echo $RESPONSE | jq -r '.url')
+            done
+            HEAD="{
+                    \"attachments\": [
+                        {
+                        \"blocks\": [
+                            {
+                            \"type\": \"section\",
+                            \"text\": {
+                                \"type\": \"mrkdwn\",
+                                \"text\": \"Build with build id <https://codemagic.io/app/'$CM_PROJECT_ID'/build/'$CM_BUILD_ID'>\"
+                            }
+                            },
+                            {
+                            \"type\": \"divider\"
+                            },
+                            {
+                            \"type\": \"section\",
+                            \"block_id\": \"section\",
+                            \"text\": {
+                                \"type\": \"mrkdwn\",
+                                \"text\": \"<https://github.com/'$CM_REPO_SLUG'> Merge pull request\"
+                            }
+                            },
+                    {
+                      \"type\": \"divider\"
+                    },"
+            FOOT="]
+                }
+              ]
+            }"
+            REQ=$HEAD
+            for i in ${URLS[@]}; do    
+              REQ="$REQ 
+                    {
+                      \"type\": \"section\",
+                      \"text\": {
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"*Artifact Link* <\'\"${URLS[$i]}\"\'|Download>\"
+                      }
+                    },"
+            done
+            REQ="$REQ $FOOT"
+      
+            curl -0 -v -X POST $SLACK_WEBHOOK_URL \
+            -H 'Content-type: application/json' \
+            --data-raw $REQ    
