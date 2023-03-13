@@ -393,7 +393,7 @@ workflows:
   
   android-client-release:
     name: Android client release
-    instance_type: mac_mini_m1
+    instance_type: linux_x2
     max_build_duration: 120
     <<: *labels
     environment:
