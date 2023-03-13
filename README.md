@@ -69,8 +69,8 @@ xxxx
 -----END RSA PRIVATE KEY-----'
 ```
 
-- Create a new environment variable group named `**aws_credentials**` with `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION` variables.
-- If you want to publish to **Play Store** then you need to create a new environment variable group named `**playstore_credentials**` with `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS` This service account will be used only for validating the workflow, not to publish the final app, because it’ll we replaced in the scripts.
+- Create a new environment variable group named **`aws_credentials`** with `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION` variables.
+- If you want to publish to **Play Store** then you need to create a new environment variable group named **`playstore_credentials`** with `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS` This service account will be used only for validating the workflow, not to publish the final app, because it’ll we replaced in the scripts.
 - Trigger builds with the Codemagic REST API, and pass the client Id, like this:
 
 ```jsx
