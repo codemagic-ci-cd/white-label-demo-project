@@ -1,169 +1,16 @@
-definitions:
-  env_versions: &env_versions
-    flutter: stable
-    xcode: 14.1
-    cocoapods: default    
-  android_groups: &android_groups
-    groups:
-      - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow.
-      - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
+definitions:     
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel # The name of your S3 bucket that have all of your clients assets.
     CLIENT_ASSETS_FOLDER: client_assets # The name of unzipped folder on the build machine that have the client assets.
     ANDROID_ASSETS_FOLDER: android_assets # The name of your folder in S3 bucket that have the client's Android assets from (/android/app/src/main/res/).
     IOS_ASSETS_FOLDER: ios_assets # The name of your folder in S3 bucket that have the client's iOS assets from (/ios/Runner/Assets.xcassets/).
-  xcode_env_vars: &xcode_env_vars
-    XCODE_WORKSPACE: "ios/Runner.xcworkspace"
-    XCODE_SCHEME: "Runner"
-  labels: &labels
-    labels:
-      - ${CLIENT_ID} # Helpful when you open your Codemagic's builds page     
   scripts:
-    - &install_dependencies
-      name: Install dependencies
-      script: flutter packages pub get
-    - &unit_tests
-      name: Unit tests
-      script: |
-        mkdir -p test-results
-        flutter test --machine > test-results/flutter.json
     - &get_assets
       name: Get assets from AWS S3 bucket
       script: |
         echo "Client ID: ${CLIENT_ID}"
         aws s3 cp s3://$S3_BUCKET_NAME/assets_${CLIENT_ID}.zip assets.zip
         unzip assets.zip -d $CLIENT_ASSETS_FOLDER
-    - &set_image # An image that being used in this sample project
-      name: Set main image
-      script: |
-        rm -rf assets/hero.png
-        cp -r ./$CLIENT_ASSETS_FOLDER/hero.png assets/hero.png
-    - &set_client_id
-      name: Set client id
-      script: |
-        cp -r ./$CLIENT_ASSETS_FOLDER/client.env assets/client.env
-    
-
-  android_scripts:
-    - &set_android_variables
-      name: Set Android environment variables from settings.env
-      script: |
-        source ./$CLIENT_ASSETS_FOLDER/settings.env
-
-        echo "PACKAGE_NAME=$PACKAGE_NAME" >> $CM_ENV
-
-        echo "CM_KEYSTORE_PASSWORD=$CM_KEYSTORE_PASSWORD" >> $CM_ENV
-        echo "CM_KEY_PASSWORD=$CM_KEY_PASSWORD" >> $CM_ENV
-        echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
-        echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
-
-        echo 'GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER' >> $CM_ENV
-        echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
-        echo 'DELIMITER' >> $CM_ENV
-    - &set_package_name
-      name: Set Package name
-      script: |
-        flutter pub add change_app_package_name
-        flutter pub run change_app_package_name:main $PACKAGE_NAME
-    - &change_android_icons
-      name: Change Android icons
-      script: |
-        cp -r ./$CLIENT_ASSETS_FOLDER/$ANDROID_ASSETS_FOLDER/* ./android/app/src/main/res
-    - &android_code_signing
-      name: Set up key.properties
-      script: | 
-        cat >> "$CM_BUILD_DIR/android/key.properties" <<EOF
-        storePassword=$CM_KEYSTORE_PASSWORD
-        keyPassword=$CM_KEY_PASSWORD
-        keyAlias=$CM_KEY_ALIAS
-        storeFile=$CM_KEYSTORE_PATH
-        EOF         
-    - &build_apk
-      name: Flutter build apk
-      script: |
-        flutter build apk --release
-    - &build_aab
-      name: Flutter build aab and automatic versioning
-      script: |
-        BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))
-        flutter build appbundle --release \
-        --build-name=1.0.$BUILD_NUMBER \
-        --build-number=$BUILD_NUMBER
-  ios_scripts:
-    - &set_ios_variables
-      name: Set iOS environment variables from settings.env
-      script: |
-        source ./$CLIENT_ASSETS_FOLDER/settings.env
-
-        echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APP_STORE_CONNECT_KEY_IDENTIFIER" >> $CM_ENV
-        echo "APP_STORE_CONNECT_ISSUER_ID=$APP_STORE_CONNECT_ISSUER_ID" >> $CM_ENV
-
-        echo "BUNDLE_ID=$BUNDLE_ID" >> $CM_ENV
-        echo "APP_STORE_ID=$APP_STORE_ID" >> $CM_ENV
-
-        echo "APP_STORE_CONNECT_PRIVATE_KEY<<DELIMITER" >> $CM_ENV
-        echo "$APP_STORE_CONNECT_PRIVATE_KEY" >> $CM_ENV
-        echo "DELIMITER" >> $CM_ENV
-
-        echo "CERTIFICATE_PRIVATE_KEY<<DELIMITER" >> $CM_ENV
-        echo "$CERTIFICATE_PRIVATE_KEY" >> $CM_ENV
-        echo "DELIMITER" >> $CM_ENV
-
-    - &install_pods
-      name: Install pods
-      script: find . -name "Podfile" -execdir pod install \;
-    - &ios_code_signing
-      name: iOS code signing
-      script: |
-        keychain initialize
-        app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-        keychain add-certificates
-        xcode-project use-profiles
-    - &build_ipa
-      name: Flutter build ipa and automatic versioning
-      script: |
-        BUILD_NUMBER=$$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
-        flutter build ipa --release \
-        --build-name=1.0.$BUILD_NUMBER \
-        --build-number=$BUILD_NUMBER\
-        --export-options-plist=/Users/builder/export_options.plist
-    - &set_bundle_id
-      name: Set bundle id
-      script: |
-        PBXPROJ=$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj
-        sed -i.bak "s/\$BASE_BUNDLE_ID/$BUNDLE_ID/g" $PBXPROJ
-    - &change_ios_icons
-      name: Change iOS icons
-      script: |
-        rm -rf ios/Runner/Assets.xcassets/AppIcon.appiconset
-        cp -r ./$CLIENT_ASSETS_FOLDER/$IOS_ASSETS_FOLDER ios/Runner/Assets.xcassets/
-
-  ios_app_store_publish: &ios_app_store_publish
-    app_store_connect:
-      api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-      key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-      issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-  play_store_publish: &play_store_publish
-    google_play:
-      credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER
-      track: $GOOGLE_PLAY_TRACK 
-      submit_as_draft: true
-  email_publish: &email_publish
-    email: 
-      recipients:
-        - name@mail.com
-      notify:
-        success: true
-        failure: true
-  artifacts:  
-    - &ipa build/ios/ipa/*.ipa
-    - &xcodelog /tmp/xcodebuild_logs/*.log
-    - &flutterdrive flutter_drive.log
-    - &testresults test-results/flutter.json
-    - &dsym $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
-    - &apk build/**/outputs/**/*.apk
-    - &aab build/**/outputs/**/*.aab
-
 
 
 # Builds will be triggered via REST API with the $CLIENT_ID in the payload
@@ -172,57 +19,143 @@ workflows:
     name: iOS client release
     instance_type: mac_mini_m1
     max_build_duration: 120
-    <<: *labels  
+    labels:
+      - ${CLIENT_ID} # Helpful when you open your Codemagic's builds page  
     environment:
-      <<: *env_versions
       groups:
         - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
       vars:
-        <<: *xcode_env_vars
+        <<: *env_vars
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
         BASE_BUNDLE_ID: io.codemagic.whitelabel.dev # <-- Put the bundle ID that exists in the code, it will be replaced with the client's.
     scripts:
-      - *get_assets
-      - *set_ios_variables
-      - *install_dependencies
-      - *install_pods
-      - *set_bundle_id
-      - *set_client_id
-      - *change_ios_icons
-      - *set_image
-      - *ios_code_signing
-      - *build_ipa
+      - *get_assets #Getting client assets from S3 bucket
+      - name: Set iOS environment variables from settings.env
+        script: |
+          source ./$CLIENT_ASSETS_FOLDER/settings.env
+
+          echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APP_STORE_CONNECT_KEY_IDENTIFIER" >> $CM_ENV
+          echo "APP_STORE_CONNECT_ISSUER_ID=$APP_STORE_CONNECT_ISSUER_ID" >> $CM_ENV
+
+          echo "BUNDLE_ID=$BUNDLE_ID" >> $CM_ENV
+          echo "APP_STORE_ID=$APP_STORE_ID" >> $CM_ENV
+
+          echo "APP_STORE_CONNECT_PRIVATE_KEY<<DELIMITER" >> $CM_ENV
+          echo "$APP_STORE_CONNECT_PRIVATE_KEY" >> $CM_ENV
+          echo "DELIMITER" >> $CM_ENV
+
+          echo "CERTIFICATE_PRIVATE_KEY<<DELIMITER" >> $CM_ENV
+          echo "$CERTIFICATE_PRIVATE_KEY" >> $CM_ENV
+          echo "DELIMITER" >> $CM_ENV
+      - name: Set bundle id # Replace the base bundle Id with the client's
+        script: |
+          PBXPROJ=$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj
+          sed -i.bak "s/\$BASE_BUNDLE_ID/$BUNDLE_ID/g" $PBXPROJ
+      - name: Change iOS icons
+        script: |
+          rm -rf ios/Runner/Assets.xcassets/AppIcon.appiconset
+          cp -r ./$CLIENT_ASSETS_FOLDER/$IOS_ASSETS_FOLDER ios/Runner/Assets.xcassets/
+      - name: Set main image # An image that being used in this sample project
+        script: cp -r ./$CLIENT_ASSETS_FOLDER/hero.png assets/hero.png
+      - name: Set client id
+        script: cp -r ./$CLIENT_ASSETS_FOLDER/client.env assets/client.env
+      - name: Install pods
+        script: find . -name "Podfile" -execdir pod install \;
+      - name: iOS code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Install dependencies
+        script: flutter packages pub get
+      - name: Unit tests
+        script: |
+          mkdir -p test-results
+          flutter test --machine > test-results/flutter.json        
+      - name: Flutter build ipa and automatic versioning
+        script: |
+          BUILD_NUMBER=$$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
+          flutter build ipa --release \
+          --build-name=1.0.$BUILD_NUMBER \
+          --build-number=$BUILD_NUMBER\
+          --export-options-plist=/Users/builder/export_options.plist
     artifacts: 
-      - *ipa
-      - *xcodelog
-      - *testresults
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log    
+      - test-results/flutter.json
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:      
-      <<: *ios_app_store_publish
-      <<: *email_publish
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+      email: 
+        recipients:
+          - name@mail.com
   
   android-client-release:
     name: Android client release
     instance_type: mac_mini_m1
     max_build_duration: 120
-    <<: *labels
+    labels:
+      - ${CLIENT_ID} # Helpful when you open your Codemagic's builds page 
     environment:
-      <<: *env_versions
-      <<: *android_groups
+      groups:
+        - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow.
+        - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
       vars:
         <<: *env_vars
         GOOGLE_PLAY_TRACK: internal # <-- The track you want to publish to in Google Play.
         GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS # <-- This service account is only for validating the inital workflow, and will not be used to publish the app
     scripts:
-      - *get_assets
-      - *set_android_variables
-      - *install_dependencies
-      - *set_package_name
-      - *set_client_id
-      - *change_android_icons
-      - *set_image
-      - *build_aab
+      - *get_assets #Getting client assets from S3 bucket
+      - name: Set Android environment variables from settings.env
+        script: |
+          source ./$CLIENT_ASSETS_FOLDER/settings.env
+
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $CM_ENV
+
+          echo "CM_KEYSTORE_PASSWORD=$CM_KEYSTORE_PASSWORD" >> $CM_ENV
+          echo "CM_KEY_PASSWORD=$CM_KEY_PASSWORD" >> $CM_ENV
+          echo "CM_KEY_ALIAS=$CM_KEY_ALIAS" >> $CM_ENV
+          echo "CM_KEYSTORE_PATH=$CM_KEYSTORE_PATH" >> $CM_ENV
+
+          echo 'GCLOUD_SERVICE_ACCOUNT_CREDENTIALS<<DELIMITER' >> $CM_ENV
+          echo "$GCLOUD_SERVICE_ACCOUNT_CREDENTIALS" >> $CM_ENV
+          echo 'DELIMITER' >> $CM_ENV
+      - name: Set Package name
+        script: |
+          flutter pub add change_app_package_name
+          flutter pub run change_app_package_name:main $PACKAGE_NAME
+      - name: Change Android icons
+        script: cp -r ./$CLIENT_ASSETS_FOLDER/$ANDROID_ASSETS_FOLDER/* ./android/app/src/main/res
+      - name: Set main image # An image that being used in this sample project
+        script: cp -r ./$CLIENT_ASSETS_FOLDER/hero.png assets/hero.png
+      - name: Set client id
+        script: cp -r ./$CLIENT_ASSETS_FOLDER/client.env assets/client.env
+      - name: Install dependencies
+        script: flutter packages pub get
+      - name: Unit tests
+        script: |
+          mkdir -p test-results
+          flutter test --machine > test-results/flutter.json
+      - name: Flutter build aab and automatic versioning
+        script: |
+          # BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))
+          BUILD_NUMBER=5
+          flutter build appbundle --release \
+          --build-name=1.0.$BUILD_NUMBER \
+          --build-number=$BUILD_NUMBER
     artifacts: 
-      - *apk
-      - *aab
+      - build/**/outputs/**/*.aab
+      - test-results/flutter.json
     publishing:
-      <<: *play_store_publish
-      <<: *email_publish
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER
+        track: $GOOGLE_PLAY_TRACK 
+        submit_as_draft: true
+      email: 
+        recipients:
+          - name@mail.com
