@@ -20,7 +20,7 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 120
     labels:
-      - "Client: ${CLIENT_ID}" # Helpful when you open your Codemagic's builds page  
+      - ${CLIENT_ID} # Helpful when you open your Codemagic's builds page  
     environment:
       groups:
         - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
@@ -96,7 +96,7 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 120
     labels:
-      - "Client: ${CLIENT_ID}" # Helpful when you open your Codemagic's builds page  
+      - ${CLIENT_ID} # Helpful when you open your Codemagic's builds page 
     environment:
       groups:
         - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow.
