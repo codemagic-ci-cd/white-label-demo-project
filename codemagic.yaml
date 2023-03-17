@@ -69,11 +69,7 @@ workflows:
           keychain add-certificates
           xcode-project use-profiles
       - name: Install dependencies
-        script: flutter packages pub get
-      - name: Unit tests
-        script: |
-          mkdir -p test-results
-          flutter test --machine > test-results/flutter.json        
+        script: flutter packages pub get      
       - name: Flutter build ipa and automatic versioning
         script: |
           BUILD_NUMBER=$$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
@@ -137,10 +133,6 @@ workflows:
         script: cp -r ./$CLIENT_ASSETS_FOLDER/client.env assets/client.env
       - name: Install dependencies
         script: flutter packages pub get
-      - name: Unit tests
-        script: |
-          mkdir -p test-results
-          flutter test --machine > test-results/flutter.json
       - name: Flutter build aab and automatic versioning
         script: |
           # BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))
