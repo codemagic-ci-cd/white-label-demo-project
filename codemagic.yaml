@@ -20,7 +20,7 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 120
     labels:
-      - ${CLIENT_ID} # Helpful when you open your Codemagic's builds page  
+      - "Client: ${CLIENT_ID}" # Helpful when you open your Codemagic's builds page  
     environment:
       groups:
         - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
@@ -50,8 +50,6 @@ workflows:
           echo "DELIMITER" >> $CM_ENV
       - name: Set bundle id # Replace the base bundle Id with the client's
         script: |
-          echo $BASE_BUNDLE_ID
-          echo $BUNDLE_ID
           PBXPROJ=$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj
           sed -i.bak "s/\$BASE_BUNDLE_ID/$BUNDLE_ID/g" $PBXPROJ
       - name: Change iOS icons
@@ -98,7 +96,7 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 120
     labels:
-      - ${CLIENT_ID} # Helpful when you open your Codemagic's builds page 
+      - "Client: ${CLIENT_ID}" # Helpful when you open your Codemagic's builds page  
     environment:
       groups:
         - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow.
