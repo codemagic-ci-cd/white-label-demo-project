@@ -24,6 +24,7 @@ workflows:
     environment:
       groups:
         - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
+        - ios_credentials # Includes (APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_IDENTIFIER, CERTIFICATE_PRIVATE_KEY)
       vars:
         <<: *env_vars
         XCODE_WORKSPACE: "ios/Runner.xcworkspace"
