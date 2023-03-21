@@ -4,7 +4,7 @@ This sample shows how to white-label your core version of a Flutter app without 
 
 ## Overview of white labeling with Codemagic
 
-When you white-label your app with Codemagic, you don't have to create a separate workflow for each client, one abstract workflow to build them all, and using RESTful API requests you can specify the client you want to white-label your app for.
+When you white-label your app with Codemagic you can use a single workflow to build different versions of your app. Each build is started with the Codemagic REST API which allows you to provide the unique variables required for each version.
 
 To get an overview of how you can white-label your mobile apps with Codemagic, please refer to the overview provided in the documentation [here](https://docs.codemagic.io/knowledge-white-label/white-label-apps-overview/).
 
@@ -19,54 +19,7 @@ Let's assume that you have the following:
     - **`android_assets/`**. This folder contains the Android icons from `/android/app/src/main/res/`.
     - **`android.keystore`**. The signing keystore for the Android app.
     - **`.env`** file if your app uses some secrets at runtime.
-    - **`settings.env`**. This file can have the customer data that Codemagic will use during the build to set or replace the base code, and the required info to sign and publish the final app to the stores.
-- The **`settings.env`** file can look something like this:
-
-```jsx
-PACKAGE_NAME=io.codemagic.whitelabel001
-
-PRIMARY_COLOR=0xFFB74093
-SECONDARY_COLOR=0xFFB74057
-
-CM_KEYSTORE_PASSWORD=keystore-password
-CM_KEY_PASSWORD=key-password
-CM_KEY_ALIAS=key-alias
-CM_KEYSTORE_PATH=../../client_assets/key.keystore
-
-GCLOUD_SERVICE_ACCOUNT_CREDENTIALS='{
-  "type": "service_account",
-  "project_id": "xxxx",
-  "private_key_id": "xxxx",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nXXXX\n-----END PRIVATE KEY-----\n",
-  "client_email": "xxxxx-xxxx@pxxxx.iam.gserviceaccount.com",
-  "client_id": "xxxx",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/xxxx-xxxx%40pc-api-xxxx-xxxx.iam.gserviceaccount.com"
-}'
-
-APP_STORE_ID=xxxxxxxxxx
-
-BUNDLE_ID=io.codemagic.whitelabel.001
-
-APP_STORE_CONNECT_KEY_IDENTIFIER=XXXXXXXXXX
-APP_STORE_CONNECT_ISSUER_ID=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
-
-APP_STORE_CONNECT_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----
-xxxx
-xxxx
-xxxx
-xxxx
------END PRIVATE KEY-----'
-
-CERTIFICATE_PRIVATE_KEY='-----BEGIN RSA PRIVATE KEY-----
-xxxx
-xxxx
-xxxx
-xxxx
------END RSA PRIVATE KEY-----'
-```
+    - **`settings.env`**. This file can have the customer data that Codemagic will use during the build to set or replace the base code, and the required info to sign and publish the final app to the stores. Read the [docs](https://docs.codemagic.io/knowledge-white-label/white-label-scripts/#downloading-assets-from-amazon-s3) for more details.
 
 - If you want to publish to **Play Store** then you need to create a new environment variable group named **`playstore_credentials`** with `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS` This service account will be used only for validating the workflow, not to publish the final app, because it’ll be replaced in the scripts.
 - Trigger builds with the Codemagic REST API, and pass the client Id, like this:
@@ -91,14 +44,14 @@ In the request body you need to pass the following:
 4. `environment`. This object holds the `variables` object which has the `variables` you need to pass to the workflow. In our example, it's required to pass the `client Id` so our workflow can identify the client we're building for.
 ```jsx
 {
-"appId": "<your-codemagic-app-id>", 
-"workflowId": "<your-codemagic-workflow-id>",
-"branch": "<branch-name>",
-"environment": { 
-    "variables": { 
-        "CLIENT_ID": "<your-client-id>"
+    "appId": "<your-codemagic-app-id>", 
+    "workflowId": "<your-codemagic-workflow-id>",
+    "branch": "<branch-name>",
+    "environment": { 
+        "variables": { 
+            "CLIENT_ID": "<your-client-id>"
+        }
     }
-}
 }
 ```
 
