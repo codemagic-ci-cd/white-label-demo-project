@@ -25,7 +25,7 @@ Let's assume that you have the following:
 - Trigger builds with the Codemagic REST API, and pass the client Id, like this:
 
 ## Triggering builds
-The Codemagic REST API is used in a white-label workflow to trigger builds for each unique client version you need to build. When triggering a build, you can pass environment variables that identify a specific client so their unique assets can be downloaded and used for the build. It can be as simple as passing the ID number associated with the client. 
+The Codemagic [REST API](https://docs.codemagic.io/rest-api/codemagic-rest-api/) is used in a white-label workflow to trigger builds for each unique client version you need to build. When triggering a build, you can pass environment variables that identify a specific client so their unique assets can be downloaded and used for the build. It can be as simple as passing the ID number associated with the client. 
 
 ### Request endpoint
 The request URL for dealing with the builds is: `https://api.codemagic.io/builds`
