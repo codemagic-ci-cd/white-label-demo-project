@@ -1,6 +1,6 @@
 # White label sample project for Flutter
 
-This sample shows how to white-label your core version of a Flutter app without the need to create multiple workflows.
+This sample shows how to to create multiple strategies for white-labeling your application.
 
 ## Overview of white labeling with Codemagic
 
@@ -71,10 +71,6 @@ curl -H "Content-Type: application/json" -H "x-auth-token: <your-auth-token>" \
         }' \
        https://api.codemagic.io/builds
 ```
-
-## Branching and workflow strategies
-
-There are many approaches to white labeling and setting up workflows. If you haven't already decided on your strategy, you can use our suggested approach which can be found in the documentation [here](https://docs.codemagic.io/knowledge-white-label/white-label-branching-strategies/).
 
 ## Definitions and anchors
 Check out [this](https://github.com/codemagic-ci-cd/white-label-demo-project/tree/anchors) branch to see how you can use anchors in your `codemagic.yaml` file if you have multiple workflows and you want to avoid repetitions.
