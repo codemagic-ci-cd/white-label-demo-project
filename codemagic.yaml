@@ -10,10 +10,10 @@ definitions:
       - cm_credentials  # Includes (CM_API_KEY) for triggering Codemagic builds via API requests
   android_groups: &android_groups
     groups:
-      - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow
+      # - playstore_credentials # Includes (GCLOUD_SERVICE_ACCOUNT_CREDENTIALS) for only validating the intial workflow
       - aws_credentials
-      - cm_credentials  # Includes (CM_API_KEY) for triggering Codemagic builds via API requests
-      - slack_credentials  # Includes (MOHAMMED_SLACK_WEBHOOK_URL) for custom Slack integrations
+      # - cm_credentials  # Includes (CM_API_KEY) for triggering Codemagic builds via API requests
+      # - slack_credentials  # Includes (MOHAMMED_SLACK_WEBHOOK_URL) for custom Slack integrations
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel
     CLIENT_ASSETS_FOLDER: client_assets
@@ -156,6 +156,10 @@ definitions:
         keyAlias=$CM_KEY_ALIAS
         storeFile=$CM_KEYSTORE_PATH
         EOF         
+    - &android_setup_keystore
+      name: Set up keystore
+      script: |
+        echo $CM_KEYSTORE | base64 --decode > $CM_KEYSTORE_PATH     
     - &build_apk
       name: Flutter build apk
       script: |
@@ -224,7 +228,7 @@ definitions:
       issuer_id: $APP_STORE_CONNECT_ISSUER_ID
   play_store_publish: &play_store_publish
     google_play:
-      credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER
+      credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
       track: $GOOGLE_PLAY_TRACK 
       submit_as_draft: true
   email_publish: &email_publish
@@ -402,25 +406,25 @@ workflows:
       <<: *android_groups
       vars:
         <<: *env_vars
-        CLIENT_ID: "004" # to be deleted
+        # CLIENT_ID: "004" # to be deleted
         GOOGLE_PLAY_TRACK: internal
-        GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        # GCLOUD_SERVICE_ACCOUNT_CREDENTIALS_HOLDER: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
     scripts:
       - *get_assets
-      - *set_android_variables
+      # - *set_android_variables
       - *install_dependencies
       - *set_package_name
       - *set_client_id
       - *change_android_icons
       - *set_image
-      # - *android_code_signing
+      - *android_setup_keystore
       # - *build_apk
       - *build_aab
     artifacts: 
       - *apk
       - *aab
-    # publishing:
-    #   <<: *play_store_publish
+    publishing:
+      <<: *play_store_publish
     # publishing:
     #   scripts: 
     #     - name: Publish to Slack
