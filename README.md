@@ -20,7 +20,7 @@ Let's assume that you have the following:
     - **`android.keystore`**. The signing keystore for the Android app.
     - **`.env`** file if your app uses some secrets at runtime.
 
-## Adding clients environment variables
+## Adding clients' environment variables
 You need to create a separate environment variable group for each of your clients with a unique name e.g. **`WL_CLIENT_ID`**.
 
 This group might contain the following environment variables:
@@ -38,7 +38,7 @@ The requested URL for dealing with apps variables is: `https://api.codemagic.io/
 To get the appId, open your Codemagic application, open its settings, and copy the **application id** from the browser address bar - `https://codemagic.io/app/<APP_ID>/settings`.
 ### Request headers
 To authorize your request you need to pass the `API access token`, which is available in the Codemagic UI under **Teams > Personal Account > Integrations > Codemagic API > Show**. 
-```jsx
+```bash
 {
     "x-auth-token: <your-auth-token>"
 }
@@ -49,7 +49,7 @@ In the request body you need to pass the following:
 2. `workflowId`. The name of the workflow in your `codemagic.yaml` file.
 3. `branch`. The name of the branch you want Codemagic to build from.
 4. `environment`. This object holds the `variables` object which has the `variables` you need to pass to the workflow. In our example, it's required to pass the `client Id` so our workflow can identify the client we're building for.
-```jsx
+```bash
 {
     "key": "<variable-name>",
     "value": "<variable-value>"
@@ -60,7 +60,7 @@ In the request body you need to pass the following:
 
 ### Using cURL
 This is the cURL command to add a simple variable:
-```jsx
+```bash
 curl -XPOST \
     -H 'x-auth-token: <API-TOKEN>' \
     -H "Content-type: application/json" \
@@ -75,7 +75,7 @@ curl -XPOST \
 
 ### Uploading the encoded Android keystore
 This is the cURL command to base64 encode a file and then upload its value e.g. uploading the android keystore:
-```jsx
+```bash
 curl -XPOST -H 'x-auth-token: <API-TOKEN>' \
      -H 'Content-Type: application/json;charset=utf-8' \
      -d "{
@@ -88,7 +88,7 @@ curl -XPOST -H 'x-auth-token: <API-TOKEN>' \
 ```
 ### Uploading the content of GCloud JSON file
 This is the cURL command to upload the content of the Google Cloud service JSON file.
-```jsx
+```bash
 curl -XPOST -H 'x-auth-token: <API-KEY>' \
      -H 'Content-Type: application/json;charset=utf-8' \
      -d "{
@@ -108,7 +108,7 @@ The Codemagic [REST API](https://docs.codemagic.io/rest-api/codemagic-rest-api/)
 The requested URL for dealing with the builds is: `https://api.codemagic.io/builds`
 ### Request headers
 To authorize your request you need to pass the `API access token`, which is available in the Codemagic UI under **Teams > Personal Account > Integrations > Codemagic API > Show**. 
-```jsx
+```bash
 {
     "x-auth-token: <your-auth-token>"
 }
@@ -123,7 +123,7 @@ In our example, it's required to pass the `client Id` and `group name` so our wo
 
 
 
-```jsx
+```bash
 {
     "appId": "<your-codemagic-app-id>", 
     "workflowId": "<your-codemagic-workflow-id>",
