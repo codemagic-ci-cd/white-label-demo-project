@@ -22,6 +22,7 @@ Let's assume that you have the following:
 
 ## Adding clients environment variables
 You need to create a separate environment variable group for each of your clients with a unique name e.g. **`WL_CLIENT_ID`**.
+
 This group might contain the following environment variables:
 - Android package name. `PACKAGE_NAME`.
 - Android Keystore information. `CM_KEYSTORE` (base64 encoded), `CM_KEY_ALIAS`, `CM_KEY_PASSWORD`, `CM_KEYSTORE_PASSWORD`, `CM_KEYSTORE_PATH`.
@@ -32,7 +33,8 @@ This group might contain the following environment variables:
 To add these values you can either use the [Codemagic UI](https://docs.codemagic.io/yaml-basic-configuration/configuring-environment-variables/#configuring-environment-variables) or use the Codemagic [REST API](https://docs.codemagic.io/rest-api/codemagic-rest-api/) to do it if you have a huge number of customers.
 
 ### Request endpoint
-The requested URL for dealing with apps variables is: `https://api.codemagic.io/apps/<app-id>/variables`
+The requested URL for dealing with apps variables is: `https://api.codemagic.io/apps/<app-id>/variables`.
+
 To get the appId, open your Codemagic application, open its settings, and copy the **application id** from the browser address bar - `https://codemagic.io/app/<APP_ID>/settings`.
 ### Request headers
 To authorize your request you need to pass the `API access token`, which is available in the Codemagic UI under **Teams > Personal Account > Integrations > Codemagic API > Show**. 
@@ -70,18 +72,21 @@ curl -XPOST \
     }' \
     'https://api.codemagic.io/apps/<app-id>/variables'
 ```
+
+### Uploading the encoded Android keystore
 This is the cURL command to base64 encode a file and then upload its value e.g. uploading the android keystore:
 ```jsx
 curl -XPOST -H 'x-auth-token: <API-TOKEN>' \
      -H 'Content-Type: application/json;charset=utf-8' \
      -d "{
-     \"key\": \"CM_KEYSTORE\",
+         \"key\": \"CM_KEYSTORE\",
      \"value\": \"$(cat whitelabel001.keystore | base64)\",
      \"group\":\"WL_CLIENT_001\",
      \"secure\": true
      }" \
      'https://api.codemagic.io/apps/<app-id>/variables'
 ```
+### Uploading the content of GCloud JSON file
 This is the cURL command to upload the content of the Google Cloud service JSON file.
 ```jsx
 curl -XPOST -H 'x-auth-token: <API-KEY>' \
