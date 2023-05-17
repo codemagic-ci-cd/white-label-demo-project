@@ -21,19 +21,19 @@ Let's assume that you have the following:
     - **`.env`** file if your app uses some secrets at runtime.
 
 ## Adding clients environment variables
-You need to create a seprate environment variable group for each of you client with a uniqe name e.g. **`WL_CLIENT_ID`**.
-This group might contains the following environment variables:
+You need to create a separate environment variable group for each of your clients with a unique name e.g. **`WL_CLIENT_ID`**.
+This group might contain the following environment variables:
 - Android package name. `PACKAGE_NAME`.
-- Android keystore information. `CM_KEYSTORE` (base64 encoded), `CM_KEY_ALIAS`, `CM_KEY_PASSWORD`, `CM_KEYSTORE_PASSWORD`, `CM_KEYSTORE_PATH`.
-- The content of the Google cloud service JSON file to publish to Play Store. `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS`.
+- Android Keystore information. `CM_KEYSTORE` (base64 encoded), `CM_KEY_ALIAS`, `CM_KEY_PASSWORD`, `CM_KEYSTORE_PASSWORD`, `CM_KEYSTORE_PATH`.
+- The content of the Google Cloud service JSON file to publish to Play Store. `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS`.
 - iOS app details. `APP_STORE_ID`, `BUNDLE_ID`.
 - App Store Connect credentials. `APP_STORE_CONNECT_KEY_IDENTIFIER`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_PRIVATE_KEY`, `CERTIFICATE_PRIVATE_KEY`.
 
 To add these values you can either use the [Codemagic UI](https://docs.codemagic.io/yaml-basic-configuration/configuring-environment-variables/#configuring-environment-variables) or use the Codemagic [REST API](https://docs.codemagic.io/rest-api/codemagic-rest-api/) to do it if you have a huge number of customers.
 
 ### Request endpoint
-The request URL for dealing with apps variables is: `https://api.codemagic.io/apps/<app-id>/variables`
-To get the appId, open your Codemagic application, open its settings and copy the **application id** from the browser address bar - `https://codemagic.io/app/<APP_ID>/settings`.
+The requested URL for dealing with apps variables is: `https://api.codemagic.io/apps/<app-id>/variables`
+To get the appId, open your Codemagic application, open its settings, and copy the **application id** from the browser address bar - `https://codemagic.io/app/<APP_ID>/settings`.
 ### Request headers
 To authorize your request you need to pass the `API access token`, which is available in the Codemagic UI under **Teams > Personal Account > Integrations > Codemagic API > Show**. 
 ```jsx
@@ -82,7 +82,7 @@ curl -XPOST -H 'x-auth-token: <API-TOKEN>' \
      }" \
      'https://api.codemagic.io/apps/<app-id>/variables'
 ```
-This is the cURL command to upload the content of the Google cloud service JSON file.
+This is the cURL command to upload the content of the Google Cloud service JSON file.
 ```jsx
 curl -XPOST -H 'x-auth-token: <API-KEY>' \
      -H 'Content-Type: application/json;charset=utf-8' \
@@ -100,7 +100,7 @@ curl -XPOST -H 'x-auth-token: <API-KEY>' \
 The Codemagic [REST API](https://docs.codemagic.io/rest-api/codemagic-rest-api/) is used in a white-label workflow to trigger builds for each unique client version you need to build, and the unique client environment group name that holds all the client secrets. 
 
 ### Request endpoint
-The request URL for dealing with the builds is: `https://api.codemagic.io/builds`
+The requested URL for dealing with the builds is: `https://api.codemagic.io/builds`
 ### Request headers
 To authorize your request you need to pass the `API access token`, which is available in the Codemagic UI under **Teams > Personal Account > Integrations > Codemagic API > Show**. 
 ```jsx
@@ -115,6 +115,9 @@ In the request body you need to pass the following:
 3. `branch`. The name of the branch you want Codemagic to build from.
 4. `environment`. This object holds the `variables` object which has the variables you need to pass to the workflow, and `groups` list which has the environment variable group name you want to use in this build.
 In our example, it's required to pass the `client Id` and `group name` so our workflow can identify the client we're building for and use the correct credentials.
+
+
+
 ```jsx
 {
     "appId": "<your-codemagic-app-id>", 
