@@ -8,7 +8,6 @@ definitions:
     - &get_assets
       name: Get assets from AWS S3 bucket
       script: |
-        echo "Client ID: ${CLIENT_ID}"
         aws s3 cp s3://$S3_BUCKET_NAME/assets_${CLIENT_ID}.zip assets.zip
         unzip assets.zip -d $CLIENT_ASSETS_FOLDER
 
@@ -27,31 +26,37 @@ workflows:
         <<: *env_vars
         XCODE_WORKSPACE: "ios/Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
-        BASE_BUNDLE_ID: io.codemagic.whitelabel.dev # <-- Put the bundle ID that exists in the code, it will be replaced with the client's.
     scripts:
       - *get_assets #Getting client assets from S3 bucket
-      - name: Set bundle id # Replace the base bundle Id with the client's
-        script: |
-          PBXPROJ=$CM_BUILD_DIR/ios/Runner.xcodeproj/project.pbxproj
-          sed -i.bak "s/\$BASE_BUNDLE_ID/$BUNDLE_ID/g" $PBXPROJ
+
+      - name: Change iOS app name
+        script: /usr/libexec/PlistBuddy -c "Set :CFBundleName $APP_NAME" -c "Set :CFBundleDisplayName $APP_NAME" ios/${XCODE_SCHEME}/Info.plist
+      
+      - name: Set bundle id
+        script: sed -i '' -e 's/PRODUCT_BUNDLE_IDENTIFIER \= [^\;]*\;/PRODUCT_BUNDLE_IDENTIFIER = '${BUNDLE_ID}';/' ios/Runner.xcodeproj/project.pbxproj
+      
       - name: Change iOS icons
-        script: |
-          rm -rf ios/Runner/Assets.xcassets/AppIcon.appiconset
-          cp -r ./$CLIENT_ASSETS_FOLDER/$IOS_ASSETS_FOLDER ios/Runner/Assets.xcassets/
+        script: cp -r ./$CLIENT_ASSETS_FOLDER/$IOS_ASSETS_FOLDER ios/Runner/Assets.xcassets/
+      
+      - name: Set client .env file
+        script: echo $DOTENV | base64 --decode > assets/client.env
+      
       - name: Set main image # An image that being used in this sample project
         script: cp -r ./$CLIENT_ASSETS_FOLDER/hero.png assets/hero.png
-      - name: Set client id
-        script: cp -r ./$CLIENT_ASSETS_FOLDER/client.env assets/client.env
+      
       - name: Install pods
-        script: find . -name "Podfile" -execdir pod install \;
+        script: find . -name "Podfile" -execdir pod install \;      
+      
       - name: iOS code signing
         script: |
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
+      
       - name: Install dependencies
         script: flutter packages pub get      
+      
       - name: Flutter build ipa and automatic versioning
         script: |
           BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_ID") + 1))
@@ -85,20 +90,30 @@ workflows:
         <<: *env_vars
     scripts:
       - *get_assets #Getting client assets from S3 bucket
+
+      - name: Set up keystore
+        script: echo $CM_KEYSTORE | base64 --decode > $CM_KEYSTORE_PATH
+      
+      - name: Change Android app name
+        script: sed -i.bak "s/android:label=.*/android:label=\"$APP_NAME\"/g" android/app/src/main/AndroidManifest.xml
+           
       - name: Set Package name
         script: |
           flutter pub add change_app_package_name
           flutter pub run change_app_package_name:main $PACKAGE_NAME
+      
       - name: Change Android icons
         script: cp -r ./$CLIENT_ASSETS_FOLDER/$ANDROID_ASSETS_FOLDER/* ./android/app/src/main/res
+          
+      - name: Set client .env file
+        script: echo $DOTENV | base64 --decode > assets/client.env
+      
       - name: Set main image # An image that being used in this sample project
         script: cp -r ./$CLIENT_ASSETS_FOLDER/hero.png assets/hero.png
-      - name: Set client id
-        script: cp -r ./$CLIENT_ASSETS_FOLDER/client.env assets/client.env
-      - name: Set up keystore
-        script: echo $CM_KEYSTORE | base64 --decode > $CM_KEYSTORE_PATH
+          
       - name: Install dependencies
         script: flutter packages pub get
+      
       - name: Flutter build aab and automatic versioning
         script: |
           BUILD_NUMBER=$(($(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks="$GOOGLE_PLAY_TRACK") + 1))
@@ -112,7 +127,6 @@ workflows:
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
         track: internal 
-        submit_as_draft: true
       email: 
         recipients:
           - name@mail.com

@@ -22,12 +22,13 @@ Let's assume that you have the following:
 You need to create a separate environment variable group for each of your clients with a unique name e.g. **`WL_CLIENT_ID`**.
 
 This group might contain the following environment variables:
+- Android app name. `APP_NAME`.
 - Android package name. `PACKAGE_NAME`.
 - Android Keystore information. `CM_KEYSTORE` (base64 encoded), `CM_KEY_ALIAS`, `CM_KEY_PASSWORD`, `CM_KEYSTORE_PASSWORD`, `CM_KEYSTORE_PATH`.
 - The content of the Google Cloud service JSON file to publish to Play Store. `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS`.
 - iOS app details. `APP_STORE_ID`, `BUNDLE_ID`.
 - App Store Connect credentials. `APP_STORE_CONNECT_KEY_IDENTIFIER`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_PRIVATE_KEY`, `CERTIFICATE_PRIVATE_KEY`.
-- **.env** file if your app uses some secrets at runtime. `DOTENV_FILE` (base64 encoded).
+- **.env** file if your app uses some secrets at runtime. `DOTENV` (base64 encoded).
 
 To add these values you can either use the [Codemagic UI](https://docs.codemagic.io/yaml-basic-configuration/configuring-environment-variables/#configuring-environment-variables) or use the Codemagic [REST API](https://docs.codemagic.io/rest-api/codemagic-rest-api/) to do it if you have a huge number of customers.
 
