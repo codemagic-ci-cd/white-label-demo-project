@@ -1,15 +1,17 @@
 definitions:     
   env_vars: &env_vars
     S3_BUCKET_NAME: cmwhitelabel # The name of your S3 bucket that have all of your clients assets.
-    CLIENT_ASSETS_FOLDER: client_assets # The name of unzipped folder on the build machine that have the client assets.
-    ANDROID_ASSETS_FOLDER: android_assets # The name of your folder in S3 bucket that have the client's Android assets from (/android/app/src/main/res/).
-    IOS_ASSETS_FOLDER: ios_assets # The name of your folder in S3 bucket that have the client's iOS assets from (/ios/Runner/Assets.xcassets/).
+    ANDROID_ASSETS_FOLDER: res # The name of your folder in S3 bucket that have the client's Android assets from (/android/app/src/main/res/).
+    IOS_ASSETS_FOLDER: AppIcon.appiconset # The name of your folder in S3 bucket that have the client's iOS assets from (/ios/Runner/Assets.xcassets/).
   scripts:
     - &get_assets
       name: Get assets from AWS S3 bucket
       script: |
-        aws s3 cp s3://$S3_BUCKET_NAME/assets_${CLIENT_ID}.zip assets.zip
-        unzip assets.zip -d $CLIENT_ASSETS_FOLDER
+        ASSETS_FOLDER=assets_${CLIENT_ID}
+        echo "ASSETS_FOLDER=$ASSETS_FOLDER" >> $CM_ENV
+        
+        aws s3 cp s3://$S3_BUCKET_NAME/$ASSETS_FOLDER.zip $ASSETS_FOLDER.zip
+        unzip $ASSETS_FOLDER.zip -d $ASSETS_FOLDER
 
 
 # Builds will be triggered via Codemagic's REST API with the $CLIENT_ID variable and the WL_CLIENT_ID environment group in the payload
@@ -24,25 +26,24 @@ workflows:
         - aws_credentials # Includes (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION)
       vars:
         <<: *env_vars
-        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
     scripts:
       - *get_assets #Getting client assets from S3 bucket
 
       - name: Change iOS app name
         script: /usr/libexec/PlistBuddy -c "Set :CFBundleName $APP_NAME" -c "Set :CFBundleDisplayName $APP_NAME" ios/${XCODE_SCHEME}/Info.plist
-      
+
       - name: Set bundle id
-        script: sed -i '' -e 's/PRODUCT_BUNDLE_IDENTIFIER \= [^\;]*\;/PRODUCT_BUNDLE_IDENTIFIER = '${BUNDLE_ID}';/' ios/Runner.xcodeproj/project.pbxproj
-      
+        script: sed -i '' -e 's/PRODUCT_BUNDLE_IDENTIFIER \= [^\;]*\;/PRODUCT_BUNDLE_IDENTIFIER = '${BUNDLE_ID}';/' ios/${XCODE_SCHEME}.xcodeproj/project.pbxproj
+
       - name: Change iOS icons
-        script: cp -r ./$CLIENT_ASSETS_FOLDER/$IOS_ASSETS_FOLDER ios/Runner/Assets.xcassets/
+        script: cp -r ./$ASSETS_FOLDER/$IOS_ASSETS_FOLDER ios/${XCODE_SCHEME}/Assets.xcassets/
       
       - name: Set client .env file
         script: echo $DOTENV | base64 --decode > assets/client.env
       
       - name: Set main image # An image that being used in this sample project
-        script: cp -r ./$CLIENT_ASSETS_FOLDER/hero.png assets/hero.png
+        script: cp -r ./$ASSETS_FOLDER/hero.png assets/hero.png
       
       - name: Install pods
         script: find . -name "Podfile" -execdir pod install \;      
@@ -93,23 +94,23 @@ workflows:
 
       - name: Set up keystore
         script: echo $CM_KEYSTORE | base64 --decode > $CM_KEYSTORE_PATH
-      
+
       - name: Change Android app name
         script: sed -i.bak "s/android:label=.*/android:label=\"$APP_NAME\"/g" android/app/src/main/AndroidManifest.xml
-           
-      - name: Set Package name
+     
+      - name: Change Android package name
         script: |
-          flutter pub add change_app_package_name
-          flutter pub run change_app_package_name:main $PACKAGE_NAME
-      
+          echo "android {  defaultConfig { applicationId '${PACKAGE_NAME}' }  }" > android/changePackage.gradle
+          echo "apply from: rootProject.file('changePackage.gradle')" >> android/app/build.gradle
+          
       - name: Change Android icons
-        script: cp -r ./$CLIENT_ASSETS_FOLDER/$ANDROID_ASSETS_FOLDER/* ./android/app/src/main/res
+        script: cp -r ./$ASSETS_FOLDER/$ANDROID_ASSETS_FOLDER/* ./android/app/src/main/res
           
       - name: Set client .env file
         script: echo $DOTENV | base64 --decode > assets/client.env
       
       - name: Set main image # An image that being used in this sample project
-        script: cp -r ./$CLIENT_ASSETS_FOLDER/hero.png assets/hero.png
+        script: cp -r ./$ASSETS_FOLDER/hero.png assets/hero.png
           
       - name: Install dependencies
         script: flutter packages pub get
